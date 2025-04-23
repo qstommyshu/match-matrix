@@ -41,6 +41,7 @@
 - [x] Implement profile editing (Basic via EditProfilePage)
 - [ ] Add profile picture upload functionality
 - [x] Create profile completion indicator (Basic on JobSeekerDashboard)
+- [x] Implement profile viewing for job applicants
 
 ## UI Development
 
@@ -68,7 +69,11 @@
   - [x] Create skills and preference tables
   - [ ] Implement scoring system
   - [ ] Build recommendation engine (Basic fetch in JobSeekerDashboard)
-- [ ] Implement application system
+- [x] Implement application system
+  - [x] Create application database functions
+  - [x] Display applications to employers
+  - [x] Allow employers to view applicant profiles
+  - [x] Set up Row Level Security for profile viewing
 - [ ] Add notification system
 
 ## Testing

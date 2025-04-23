@@ -17,38 +17,114 @@ import {
   Briefcase,
   Loader2,
 } from "lucide-react";
-import { getJobs, Job } from "@/lib/database";
+import {
+  getJobs,
+  Job,
+  getEmployerReceivedApplications,
+  Profile,
+} from "@/lib/database";
 import { toast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
 
+// Define type for received applications (matching the return type of getEmployerReceivedApplications)
+type ReceivedApplication = {
+  id: string;
+  created_at: string;
+  status: string;
+  user_id: string;
+  job: { id: string; title: string; employer_id: string } | null;
+  user: {
+    id: string;
+    full_name: string | null;
+    email: string;
+    job_seeker_profile: {
+      id: string;
+      headline: string | null;
+      years_of_experience: number | null;
+    } | null;
+  } | null;
+};
+
 export const EmployerDashboardPage: React.FC = () => {
-  const { profile, employerProfile } = useProfile();
+  const { profile, employerProfile, isEmployer } = useProfile();
   const navigate = useNavigate();
   const [postedJobs, setPostedJobs] = useState<Job[]>([]);
   const [isLoadingJobs, setIsLoadingJobs] = useState(false);
+  const [jobsError, setJobsError] = useState<string | null>(null);
+  const [recentApplications, setRecentApplications] = useState<
+    ReceivedApplication[]
+  >([]);
+  const [isLoadingApps, setIsLoadingApps] = useState(true);
+  const [appsError, setAppsError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (profile?.id && profile.type === "employer") {
+    let isMounted = true;
+    if (profile?.id && isEmployer()) {
       const fetchPostedJobs = async () => {
+        if (!isMounted) return;
         setIsLoadingJobs(true);
+        setJobsError(null);
         try {
           const { jobs, error } = await getJobs({ employerId: profile.id });
+          if (!isMounted) return;
           if (error) throw error;
           setPostedJobs(jobs || []);
         } catch (error) {
+          if (!isMounted) return;
           console.error("Failed to fetch posted jobs:", error);
-          toast({
-            title: "Error",
-            description: "Could not load your job postings.",
-            variant: "destructive",
-          });
+          setJobsError(
+            error instanceof Error
+              ? error.message
+              : "Could not load job postings."
+          );
         } finally {
-          setIsLoadingJobs(false);
+          if (isMounted) setIsLoadingJobs(false);
         }
       };
       fetchPostedJobs();
     }
-  }, [profile?.id, profile?.type]);
+    return () => {
+      isMounted = false;
+    };
+  }, [profile, isEmployer]);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (profile?.id && isEmployer()) {
+      const fetchRecentApps = async () => {
+        if (!isMounted) return;
+        setIsLoadingApps(true);
+        setAppsError(null);
+        try {
+          const { applications, error } = await getEmployerReceivedApplications(
+            profile.id
+          );
+          if (!isMounted) return;
+          if (error) throw error;
+          setRecentApplications(applications || []);
+        } catch (error) {
+          if (!isMounted) return;
+          console.error("Failed to fetch recent applications:", error);
+          const errorMsg =
+            error instanceof Error
+              ? error.message
+              : "Could not load recent applications.";
+          setAppsError(errorMsg);
+          toast({
+            title: "Error",
+            description: errorMsg,
+            variant: "destructive",
+          });
+        } finally {
+          if (isMounted) setIsLoadingApps(false);
+        }
+      };
+      fetchRecentApps();
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [profile, isEmployer]);
 
   return (
     <div className="container mx-auto py-8 px-4 space-y-8">
@@ -101,6 +177,8 @@ export const EmployerDashboardPage: React.FC = () => {
               <div className="flex justify-center items-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
+            ) : jobsError ? (
+              <p className="text-red-600 text-center">Error: {jobsError}</p>
             ) : postedJobs.length > 0 ? (
               postedJobs.map((job) => (
                 <div
@@ -117,7 +195,7 @@ export const EmployerDashboardPage: React.FC = () => {
                         className={
                           job.status === "open"
                             ? "bg-green-100 text-green-800"
-                            : ""
+                            : "bg-red-100 text-red-800"
                         }
                       >
                         {job.status}
@@ -126,7 +204,6 @@ export const EmployerDashboardPage: React.FC = () => {
                       <span>
                         Posted: {new Date(job.created_at).toLocaleDateString()}
                       </span>
-                      {/* TODO: Add applicant count when available */}
                     </div>
                   </div>
                   <div>
@@ -157,7 +234,6 @@ export const EmployerDashboardPage: React.FC = () => {
                 </Button>
               </div>
             )}
-            {/* Optionally add a link to manage all jobs if list is long */}
             {postedJobs.length > 0 && (
               <div className="mt-4 text-center">
                 <Button variant="link" onClick={() => navigate("/manage-jobs")}>
@@ -169,7 +245,7 @@ export const EmployerDashboardPage: React.FC = () => {
         </Card>
       </div>
 
-      {/* Recent Applications Card (Placeholder) */}
+      {/* Recent Applications Card */}
       <Card className="glass-card">
         <CardHeader>
           <CardTitle>Recent Applications</CardTitle>
@@ -178,10 +254,104 @@ export const EmployerDashboardPage: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center text-muted-foreground py-8">
-            <Bell className="mx-auto h-12 w-12 mb-4" />
-            <p>Notifications for new applications will appear here.</p>
-          </div>
+          {isLoadingApps ? (
+            <div className="flex justify-center items-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : appsError ? (
+            <p className="text-red-600 text-center">Error: {appsError}</p>
+          ) : recentApplications.length > 0 ? (
+            <ul className="space-y-4">
+              {recentApplications.map((app) => {
+                // Safely access potentially nested data
+                const applicantName =
+                  app.user?.full_name || app.user?.email || "Unknown Applicant";
+                const applicantHeadline =
+                  app.user?.job_seeker_profile?.headline;
+                const experienceYears =
+                  app.user?.job_seeker_profile?.years_of_experience;
+                const jobTitle = app.job?.title || "Unknown Job";
+                const jobId = app.job?.id;
+                const appliedDate = new Date(
+                  app.created_at
+                ).toLocaleDateString();
+
+                return (
+                  <li
+                    key={app.id}
+                    className="border rounded-lg p-4 hover:shadow-md transition-shadow duration-200 glass-card-inner flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2"
+                  >
+                    <div className="flex-grow">
+                      <h4 className="font-semibold">{applicantName}</h4>
+                      {applicantHeadline && (
+                        <p className="text-sm text-muted-foreground">
+                          {applicantHeadline}
+                        </p>
+                      )}
+                      {experienceYears && (
+                        <span className="text-xs text-muted-foreground">
+                          {experienceYears} years experience
+                        </span>
+                      )}
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Applied for:{" "}
+                        {jobId ? (
+                          <span
+                            className="cursor-pointer hover:underline"
+                            onClick={() => navigate(`/jobs/${jobId}`)}
+                          >
+                            {jobTitle}
+                          </span>
+                        ) : (
+                          <span>{jobTitle}</span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-4 flex-shrink-0 mt-2 sm:mt-0">
+                      <Badge variant="secondary">{app.status}</Badge>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {appliedDate}
+                      </span>
+                      {/* Link to view applicant profile */}
+                      {app.user_id && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            navigate(`/user-profile/${app.user_id}`)
+                          }
+                        >
+                          View Profile
+                        </Button>
+                      )}
+                      {/* Link to view all applicants for that specific job */}
+                      {jobId && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/jobs/${jobId}/applicants`)}
+                        >
+                          View Applicants
+                        </Button>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <div className="text-center text-muted-foreground py-8">
+              <Bell className="mx-auto h-12 w-12 mb-4" />
+              <p>No recent applications found.</p>
+            </div>
+          )}
+          {/* Optionally link to a full application history page for the employer */}
+          {recentApplications.length > 0 && (
+            <div className="mt-4 text-center">
+              {/* TODO: Create /employer-applications page */}
+              <Button variant="link">View All Received Applications</Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

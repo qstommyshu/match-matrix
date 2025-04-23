@@ -93,7 +93,9 @@ export interface Application {
   created_at: string;
   updated_at: string;
   job?: Job;
-  user?: Profile;
+  user?: Profile & {
+    job_seeker_profile?: JobSeekerProfile | null;
+  };
 }
 
 // Profile functions
@@ -277,18 +279,13 @@ export const getJobs = async (filters?: {
   employerId?: string;
 }) => {
   let query = supabase.from("jobs").select(`
-      *,
-      employer:profiles(*),
-      skills:job_skills(
-        *,
-        skill:skills(*)
-      )
-    `);
+    *,
+    employer:profiles(*),
+    skills:job_skills(*, skill:skills(*))
+  `);
 
   if (filters?.search) {
-    query = query.or(
-      `title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`
-    );
+    query = query.textSearch("fts", filters.search);
   }
 
   if (filters?.location) {
@@ -303,13 +300,10 @@ export const getJobs = async (filters?: {
     query = query.eq("employer_id", filters.employerId);
   }
 
-  const { data, error } = await query
-    .eq("status", "open")
-    .order("created_at", { ascending: false });
+  const { data, error } = await query.order("created_at", { ascending: false });
 
   let filteredJobs = data as Job[] | null;
 
-  // Filter by skills (client-side filtering since it's a more complex query)
   if (filteredJobs && filters?.skills && filters.skills.length > 0) {
     filteredJobs = filteredJobs.filter((job) => {
       if (!job.skills) return false;
@@ -329,10 +323,7 @@ export const getJob = async (jobId: string) => {
       `
       *,
       employer:profiles(*),
-      skills:job_skills(
-        *,
-        skill:skills(*)
-      )
+      skills:job_skills(*, skill:skills(*))
     `
     )
     .eq("id", jobId)
@@ -342,11 +333,19 @@ export const getJob = async (jobId: string) => {
 };
 
 export const createJob = async (
-  job: Omit<Job, "id" | "created_at" | "updated_at" | "employer" | "skills">
+  job: Omit<
+    Job,
+    "id" | "created_at" | "updated_at" | "employer" | "skills" | "status"
+  > & { status?: string }
 ) => {
+  const jobDataWithDefaults = {
+    ...job,
+    status: job.status || "open",
+  };
+
   const { data, error } = await supabase
     .from("jobs")
-    .insert(job)
+    .insert(jobDataWithDefaults)
     .select()
     .single();
 
@@ -397,7 +396,10 @@ export const getJobApplications = async (jobId: string) => {
     .select(
       `
       *,
-      user:profiles(*),
+      user:profiles(
+        *,
+        job_seeker_profile:job_seeker_profiles(*)
+      ),
       job:jobs(*)
     `
     )
@@ -418,9 +420,70 @@ export const getUserApplications = async (userId: string) => {
       )
     `
     )
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
 
   return { applications: data as Application[] | null, error };
+};
+
+export const getEmployerReceivedApplications = async (
+  employerId: string,
+  limit: number = 5
+) => {
+  const { data, error } = await supabase
+    .from("applications")
+    .select(
+      `
+      id,
+      created_at,
+      status,
+      user_id,
+      job:jobs!inner(
+        id,
+        title,
+        employer_id
+      ),
+      user:profiles( 
+        id,
+        full_name,
+        email,
+        job_seeker_profile:job_seeker_profiles(
+          id,
+          headline,
+          years_of_experience
+        )
+      )
+    `
+    )
+    .eq("job.employer_id", employerId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  type ReceivedApplicationData = {
+    id: string;
+    created_at: string;
+    status: string;
+    user_id: string;
+    job: {
+      id: string;
+      title: string;
+      employer_id: string;
+    } | null;
+    user: {
+      id: string;
+      full_name: string | null;
+      email: string;
+      job_seeker_profile: {
+        id: string;
+        headline: string | null;
+        years_of_experience: number | null;
+      } | null;
+    } | null;
+  };
+
+  const applicationsData = data as unknown as ReceivedApplicationData[] | null;
+
+  return { applications: applicationsData, error };
 };
 
 export const createApplication = async (
@@ -450,4 +513,35 @@ export const updateApplicationStatus = async (
     .single();
 
   return { application: data as Application | null, error };
+};
+
+/**
+ * Get a user profile by ID
+ */
+export const getUserProfileById = async (
+  userId: string
+): Promise<Profile | null> => {
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select(
+        `
+        *,
+        job_seeker_profile:job_seeker_profiles(*),
+        employer_profile:employer_profiles(*)
+      `
+      )
+      .eq("id", userId)
+      .single();
+
+    if (error) {
+      console.error("Error fetching user profile:", error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error in getUserProfileById:", error);
+    return null;
+  }
 };

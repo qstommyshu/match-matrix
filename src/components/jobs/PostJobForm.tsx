@@ -43,6 +43,7 @@ const postJobSchema = z
     salary_min: z.coerce.number().positive().optional().nullable(),
     salary_max: z.coerce.number().positive().optional().nullable(),
     experience_level: z.string().optional(),
+    status: z.enum(["open", "closed"]).optional(),
   })
   .refine(
     (data) =>
@@ -83,6 +84,7 @@ export const PostJobForm: React.FC<PostJobFormProps> = ({
       salary_min: initialData?.salary_min ?? null,
       salary_max: initialData?.salary_max ?? null,
       experience_level: initialData?.experience_level || "",
+      status: initialData?.status === "closed" ? "closed" : "open",
     },
   });
 
@@ -98,6 +100,7 @@ export const PostJobForm: React.FC<PostJobFormProps> = ({
         salary_min: initialData.salary_min ?? null,
         salary_max: initialData.salary_max ?? null,
         experience_level: initialData.experience_level || "",
+        status: initialData.status === "closed" ? "closed" : "open",
       });
     }
   }, [initialData, form]);
@@ -124,6 +127,7 @@ export const PostJobForm: React.FC<PostJobFormProps> = ({
           salary_min: data.salary_min,
           salary_max: data.salary_max,
           experience_level: data.experience_level || null,
+          status: data.status || "open",
         };
         const { job, error } = await updateJob(jobId, updateData);
         if (error) throw error;
@@ -371,6 +375,41 @@ export const PostJobForm: React.FC<PostJobFormProps> = ({
             )}
           />
         </div>
+
+        {/* Status */}
+        {isEditing && (
+          <FormField
+            control={form.control}
+            name="status"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Job Status</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value || "open"}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select job status" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="open">
+                      Open (Visible to Job Seekers)
+                    </SelectItem>
+                    <SelectItem value="closed">
+                      Closed (Hidden from Job Seekers)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  Set the visibility of this job posting.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         {/* TODO: Add Skills Section Here (potentially using a multi-select component) */}
         {/* For now, skills need to be added/managed after job creation */}

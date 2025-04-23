@@ -20,6 +20,8 @@ import PostJobPage from "./pages/PostJobPage";
 import EditJobPage from "./pages/EditJobPage";
 import JobDetailPage from "./pages/JobDetailPage";
 import JobSearchPage from "./pages/JobSearchPage";
+import ManageJobsPage from "./pages/ManageJobsPage";
+import ViewApplicantsPage from "./pages/ViewApplicantsPage";
 
 const queryClient = new QueryClient();
 
@@ -102,6 +104,14 @@ const App = () => (
                   }
                 />
                 <Route
+                  path="/jobs/:jobId/applicants"
+                  element={
+                    <ProtectedRoute allowedRoles={["employer"]}>
+                      <ViewApplicantsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/edit-job/:jobId"
                   element={
                     <ProtectedRoute allowedRoles={["employer"]}>
@@ -129,7 +139,7 @@ const App = () => (
                   path="/manage-jobs"
                   element={
                     <ProtectedRoute allowedRoles={["employer"]}>
-                      <div>Manage Jobs Page (Placeholder)</div>
+                      <ManageJobsPage />
                     </ProtectedRoute>
                   }
                 />

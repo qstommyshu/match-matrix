@@ -20,31 +20,44 @@ const JobSearchPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
     const fetchAllJobs = async () => {
-      setIsLoading(true);
+      if (isMounted) setIsLoading(true);
       setError(null);
       try {
-        // Fetch all jobs (status/company name refinement needed later)
         const { jobs: fetchedJobs, error: fetchError } = await getJobs({});
+        if (!isMounted) return;
         if (fetchError) throw fetchError;
-        // Removed client-side status filter - display all jobs for now
-        setJobs(fetchedJobs || []);
+
+        // Filter for open jobs client-side
+        const openJobs = (fetchedJobs || []).filter(
+          (job) => job.status === "open"
+        );
+
+        if (isMounted) setJobs(openJobs);
       } catch (err) {
+        if (!isMounted) return;
         console.error("Error fetching all jobs:", err);
         const errorMessage =
           err instanceof Error ? err.message : "Failed to load jobs.";
-        setError(errorMessage);
-        toast({
-          title: "Error",
-          description: "Could not load job listings.",
-          variant: "destructive",
-        });
+        if (isMounted) {
+          setError(errorMessage);
+          toast({
+            title: "Error",
+            description: "Could not load job listings.",
+            variant: "destructive",
+          });
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     };
 
     fetchAllJobs();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (
@@ -145,7 +158,7 @@ const JobSearchPage: React.FC = () => {
       ) : (
         <div className="text-center text-muted-foreground py-16">
           <Briefcase className="mx-auto h-12 w-12 mb-4" />
-          <p>No jobs found at the moment.</p>
+          <p>No open jobs found at the moment.</p>
         </div>
       )}
     </div>

@@ -12,8 +12,15 @@ import { useProfile } from "@/lib/ProfileContext";
 import { useNavigate } from "react-router-dom";
 import { Briefcase, FileText, Search, MapPin, Loader2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import { getJobs, Job, Profile } from "@/lib/database";
+import {
+  getJobs,
+  Job,
+  Profile,
+  getUserApplications,
+  Application,
+} from "@/lib/database";
 import { toast } from "@/components/ui/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 // Placeholder type for Recent Applications section
 interface ApplicationStub {
@@ -24,21 +31,25 @@ interface ApplicationStub {
 }
 
 export const JobSeekerDashboardPage: React.FC = () => {
-  const { profile, jobSeekerProfile } = useProfile();
+  const { profile, jobSeekerProfile, isJobSeeker } = useProfile();
   const navigate = useNavigate();
 
   const [recommendedJobs, setRecommendedJobs] = useState<Job[]>([]);
   const [isLoadingJobs, setIsLoadingJobs] = useState(true);
   const [jobsError, setJobsError] = useState<string | null>(null);
 
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [isLoadingApps, setIsLoadingApps] = useState(true);
+  const [appsError, setAppsError] = useState<string | null>(null);
+
   const profileCompleteness = jobSeekerProfile?.profile_completeness || 60;
   const displayName = profile?.full_name || profile?.email || "Job Seeker";
 
   useEffect(() => {
-    let isMounted = true; // Prevent state update on unmounted component
+    let isMounted = true;
     const fetchRecommendedJobs = async () => {
-      // Ensure loading is true only if mounted
-      if (isMounted) setIsLoadingJobs(true);
+      if (!isMounted) return;
+      setIsLoadingJobs(true);
       setJobsError(null);
       try {
         const { jobs: fetchedJobs, error: fetchError } = await getJobs({});
@@ -67,16 +78,62 @@ export const JobSeekerDashboardPage: React.FC = () => {
       }
     };
 
-    if (profile) {
+    if (profile && isJobSeeker()) {
       fetchRecommendedJobs();
     } else {
-      setIsLoadingJobs(false);
+      if (isMounted) setIsLoadingJobs(false);
     }
 
     return () => {
       isMounted = false;
-    }; // Cleanup function
-  }, [profile]);
+    };
+  }, [profile, isJobSeeker]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchApplications = async () => {
+      if (!profile || !isJobSeeker()) {
+        if (isMounted) setIsLoadingApps(false);
+        return;
+      }
+      if (isMounted) setIsLoadingApps(true);
+      setAppsError(null);
+      try {
+        const { applications: fetchedApps, error: fetchError } =
+          await getUserApplications(profile.id);
+        if (!isMounted) return;
+        if (fetchError) throw fetchError;
+        const sortedApps = (fetchedApps || []).sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        setApplications(sortedApps);
+      } catch (err) {
+        if (!isMounted) return;
+        console.error("Error fetching applications:", err);
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to load applications.";
+        setAppsError(errorMessage);
+        toast({
+          title: "Error Loading Applications",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      } finally {
+        if (isMounted) setIsLoadingApps(false);
+      }
+    };
+
+    if (profile) {
+      fetchApplications();
+    } else {
+      if (isMounted) setIsLoadingApps(false);
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [profile, isJobSeeker]);
 
   // Use the placeholder type
   const recentApplications: ApplicationStub[] = [
@@ -218,20 +275,38 @@ export const JobSeekerDashboardPage: React.FC = () => {
           <CardDescription>Track your job application status.</CardDescription>
         </CardHeader>
         <CardContent>
-          {recentApplications.length > 0 ? (
+          {isLoadingApps ? (
+            <div className="flex justify-center items-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : appsError ? (
+            <div className="text-center text-red-600 py-8">
+              <p>Error loading applications: {appsError}</p>
+            </div>
+          ) : applications.length > 0 ? (
             <ul className="space-y-4">
-              {recentApplications.map((app) => (
+              {applications.map((app) => (
                 <li
                   key={app.id}
-                  className="border rounded-lg p-4 hover:shadow-md transition-shadow duration-200 glass-card-inner flex justify-between items-center"
+                  className="border rounded-lg p-4 hover:shadow-md transition-shadow duration-200 glass-card-inner flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2"
                 >
-                  <div>
-                    <h4 className="font-semibold">{app.title}</h4>
+                  <div className="flex-grow">
+                    <h4
+                      className="font-semibold cursor-pointer hover:underline"
+                      onClick={() => navigate(`/jobs/${app.job_id}`)}
+                    >
+                      {app.job?.title || "Job Title Unavailable"}
+                    </h4>
                     <p className="text-sm text-muted-foreground">
-                      {app.company}
+                      {app.job?.employer?.full_name || "Company Unavailable"}
                     </p>
                   </div>
-                  <span className="text-sm font-medium">{app.status}</span>
+                  <div className="flex items-center gap-4 flex-shrink-0 mt-2 sm:mt-0">
+                    <Badge variant="secondary">{app.status}</Badge>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      Applied: {new Date(app.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -241,9 +316,9 @@ export const JobSeekerDashboardPage: React.FC = () => {
               <p>You haven't applied to any jobs recently.</p>
             </div>
           )}
-          {recentApplications.length > 0 && (
+          {applications.length > 0 && (
             <div className="mt-4 text-center">
-              <Button variant="link">View All Applications</Button>{" "}
+              <Button variant="link">View All Applications</Button>
             </div>
           )}
         </CardContent>

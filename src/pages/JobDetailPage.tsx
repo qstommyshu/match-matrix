@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { getJob, Job } from "@/lib/database";
+import {
+  getJob,
+  Job,
+  getUserApplications,
+  createApplication,
+  Application,
+} from "@/lib/database"; // Import application functions
 import { useProfile } from "@/lib/ProfileContext"; // To check if viewer is owner or applicant
 import { useAuth } from "@/lib/AuthContext"; // To check if logged in
 import {
@@ -20,6 +26,7 @@ import {
   CalendarDays,
   UserCheck,
   Send,
+  Users,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 
@@ -31,23 +38,54 @@ const JobDetailPage: React.FC = () => {
   const [job, setJob] = useState<Job | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasApplied, setHasApplied] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
+  const [checkingApplication, setCheckingApplication] = useState(true); // Loading state for application check
 
   useEffect(() => {
+    let isMounted = true;
     if (!jobId) {
       setError("Job ID is missing.");
       setIsLoading(false);
+      setCheckingApplication(false);
       return;
     }
 
-    const fetchJobDetails = async () => {
+    const fetchDetailsAndApplicationStatus = async () => {
+      if (!isMounted) return;
       setIsLoading(true);
+      setCheckingApplication(true);
       setError(null);
+      setHasApplied(false); // Reset application status on job change
+
       try {
+        // Fetch Job Details
         const { job: fetchedJob, error: fetchError } = await getJob(jobId);
+        if (!isMounted) return;
         if (fetchError) throw fetchError;
         if (!fetchedJob) throw new Error("Job not found.");
         setJob(fetchedJob);
+
+        // Check Application Status (only if user is logged in seeker)
+        if (user && profile && isJobSeeker()) {
+          const { applications, error: appError } = await getUserApplications(
+            user.id
+          );
+          if (!isMounted) return;
+          if (appError) {
+            // Log error but don't block job view
+            console.error("Error checking application status:", appError);
+          } else {
+            const alreadyApplied = applications?.some(
+              (app) => app.job_id === jobId
+            );
+            setHasApplied(!!alreadyApplied);
+          }
+        } else {
+          setHasApplied(false); // Cannot apply if not logged in seeker
+        }
       } catch (err) {
+        if (!isMounted) return;
         console.error("Error fetching job details:", err);
         setError(
           err instanceof Error ? err.message : "Failed to load job details."
@@ -58,22 +96,57 @@ const JobDetailPage: React.FC = () => {
           variant: "destructive",
         });
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+          setCheckingApplication(false);
+        }
       }
     };
 
-    fetchJobDetails();
-  }, [jobId]);
+    fetchDetailsAndApplicationStatus();
 
-  const isOwner = user && job && job.employer_id === user.id;
+    return () => {
+      isMounted = false;
+    };
+  }, [jobId, user, profile]); // Rerun if user/profile context changes
 
-  // TODO: Implement apply functionality
-  const handleApply = () => {
-    toast({
-      title: "Feature Coming Soon!",
-      description: "Application functionality is not yet implemented.",
-    });
-    // navigate(`/apply/${jobId}`);
+  const handleApply = async () => {
+    if (!user || !profile || !isJobSeeker() || !jobId || hasApplied) {
+      toast({
+        title: "Cannot Apply",
+        description: "You are either not eligible or have already applied.",
+        variant: "default",
+      });
+      return;
+    }
+
+    setIsApplying(true);
+    try {
+      const { application, error } = await createApplication({
+        job_id: jobId,
+        user_id: user.id,
+        status: "applied", // Explicitly set status
+        cover_letter: null, // No cover letter for now
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Application Submitted!",
+        description: "Your application has been sent successfully.",
+      });
+      setHasApplied(true); // Update UI to reflect application
+    } catch (err) {
+      console.error("Error submitting application:", err);
+      toast({
+        title: "Application Failed",
+        description:
+          err instanceof Error ? err.message : "Could not submit application.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsApplying(false);
+    }
   };
 
   if (isLoading) {
@@ -97,6 +170,45 @@ const JobDetailPage: React.FC = () => {
       </div>
     );
   }
+
+  // Determine button state
+  const getApplyButton = () => {
+    if (!user || !isJobSeeker()) {
+      return (
+        <Button className="w-full" disabled>
+          Login as Job Seeker to Apply
+        </Button>
+      );
+    }
+    if (checkingApplication) {
+      return (
+        <Button className="w-full" disabled>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Checking Status...
+        </Button>
+      );
+    }
+    if (hasApplied) {
+      return (
+        <Button className="w-full" disabled variant="outline">
+          Already Applied
+        </Button>
+      );
+    }
+    if (isApplying) {
+      return (
+        <Button className="w-full" disabled>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Applying...
+        </Button>
+      );
+    }
+    return (
+      <Button className="w-full" onClick={handleApply}>
+        <Send className="mr-2 h-4 w-4" /> Apply Now
+      </Button>
+    );
+  };
+
+  const isOwner = user && job && job.employer_id === user.id;
 
   return (
     <div className="container mx-auto py-12 px-4 max-w-4xl">
@@ -199,22 +311,26 @@ const JobDetailPage: React.FC = () => {
             </Card>
 
             {/* Action Buttons */}
-            <div className="mt-6">
+            <div className="mt-6 space-y-3">
               {isOwner ? (
-                <Button
-                  className="w-full"
-                  onClick={() => navigate(`/edit-job/${jobId}`)}
-                >
-                  <Briefcase className="mr-2 h-4 w-4" /> Edit Job Posting
-                </Button>
-              ) : isJobSeeker() ? (
-                <Button className="w-full" onClick={handleApply}>
-                  <Send className="mr-2 h-4 w-4" /> Apply Now
-                </Button>
+                <>
+                  <Button
+                    className="w-full"
+                    onClick={() => navigate(`/edit-job/${jobId}`)}
+                  >
+                    <Briefcase className="mr-2 h-4 w-4" /> Edit Job Posting
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => navigate(`/jobs/${jobId}/applicants`)}
+                  >
+                    <Users className="mr-2 h-4 w-4" /> View Applicants
+                  </Button>
+                </>
               ) : (
-                <Button className="w-full" disabled>
-                  Login as Job Seeker to Apply
-                </Button>
+                // Render the dynamic apply button
+                getApplyButton()
               )}
             </div>
           </div>
