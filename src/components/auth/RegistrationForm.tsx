@@ -110,15 +110,36 @@ const RegistrationForm = () => {
         // Successfully registered
         toast({
           title: "Registration successful",
-          description:
-            "Please check your email for verification. Redirecting to login...",
+          description: "Account created! Redirecting to profile setup...",
         });
 
-        // In a real app, you'd want to store the user type in your database
-        // For now, we're just simulating this
+        // Store user type in localStorage for profile setup
+        localStorage.setItem("userType", activeTab);
+
+        // Store form data in localStorage for prefilling profile forms
+        if (activeTab === "candidate") {
+          localStorage.setItem(
+            "userData",
+            JSON.stringify({
+              fullName: candidateData.fullName,
+              email: candidateData.email,
+            })
+          );
+        } else {
+          localStorage.setItem(
+            "userData",
+            JSON.stringify({
+              companyName: companyData.companyName,
+              industry: companyData.industry,
+              email: companyData.email,
+            })
+          );
+        }
+
+        // Redirect to profile setup page after registration
         setTimeout(() => {
-          navigate("/login");
-        }, 3000);
+          navigate("/profile-setup");
+        }, 2000);
       }
     } catch (err) {
       console.error("An unexpected error occurred:", err);

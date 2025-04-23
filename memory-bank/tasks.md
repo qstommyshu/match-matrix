@@ -12,8 +12,8 @@
 
 - [x] Install Supabase client packages
 - [x] Configure Supabase client
-- [ ] Create Supabase project on Supabase.com
-- [ ] Set up environment variables with actual credentials
+- [x] Create Supabase project on Supabase.com
+- [x] Set up environment variables with actual credentials
 - [x] Create database schema
 - [x] Prepare database migrations
 

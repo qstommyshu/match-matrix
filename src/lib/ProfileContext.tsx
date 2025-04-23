@@ -46,6 +46,9 @@ interface ProfileContextType {
   updateEmployer: (
     updates: Partial<EmployerProfile>
   ) => Promise<{ success: boolean; error: Error | null }>;
+  isJobSeeker: () => boolean;
+  isEmployer: () => boolean;
+  hasProfile: () => boolean;
 }
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
@@ -314,6 +317,18 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const isJobSeeker = () => {
+    return profile?.type === "job_seeker" && jobSeekerProfile !== null;
+  };
+
+  const isEmployer = () => {
+    return profile?.type === "employer" && employerProfile !== null;
+  };
+
+  const hasProfile = () => {
+    return profile !== null && (isJobSeeker() || isEmployer());
+  };
+
   useEffect(() => {
     fetchProfiles();
   }, [user]);
@@ -333,6 +348,9 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
         updateUserProfile,
         updateSeeker,
         updateEmployer,
+        isJobSeeker,
+        isEmployer,
+        hasProfile,
       }}
     >
       {children}

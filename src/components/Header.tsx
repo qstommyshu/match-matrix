@@ -2,9 +2,20 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useAuth } from "../lib/AuthContext";
+import { useProfile } from "../lib/ProfileContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ChevronDown, UserCircle, LogOut } from "lucide-react";
 
 const Header = () => {
   const { user, signOut } = useAuth();
+  const { isJobSeeker, isEmployer, hasProfile, loading } = useProfile();
 
   const handleSignOut = async () => {
     await signOut();
@@ -41,21 +52,76 @@ const Header = () => {
           >
             Pricing
           </Link>
+
+          {/* Show profile-specific links when user is logged in and has a profile */}
+          {user && !loading && hasProfile() && (
+            <>
+              {isJobSeeker() && (
+                <Link
+                  to="/candidate-profile"
+                  className="text-sm font-medium hover:text-neon-purple transition-colors"
+                >
+                  My Profile
+                </Link>
+              )}
+            </>
+          )}
         </nav>
 
         <div className="flex items-center gap-4">
           {user ? (
             <div className="flex items-center gap-4">
-              <span className="text-sm font-medium">
-                Hi! {user.email?.split("@")[0]}
-              </span>
-              <Button
-                variant="ghost"
-                className="text-sm"
-                onClick={handleSignOut}
-              >
-                Sign Out
-              </Button>
+              {/* Display profile setup prompt if user doesn't have a profile */}
+              {!loading && !hasProfile() && (
+                <Link to="/profile-setup">
+                  <Button className="text-sm bg-gradient-to-r from-neon-purple to-neon-blue hover:opacity-90 transition-opacity">
+                    Complete Profile
+                  </Button>
+                </Link>
+              )}
+
+              {/* User dropdown menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="flex items-center gap-1 p-1"
+                  >
+                    <span className="text-sm font-medium">
+                      Hi! {user.email?.split("@")[0]}
+                    </span>
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+
+                  {hasProfile() && (
+                    <DropdownMenuItem asChild>
+                      <Link
+                        to={
+                          isJobSeeker()
+                            ? "/candidate-profile"
+                            : "/company-profile"
+                        }
+                        className="flex items-center cursor-pointer"
+                      >
+                        <UserCircle className="mr-2 h-4 w-4" />
+                        <span>My Profile</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+
+                  <DropdownMenuItem
+                    onClick={handleSignOut}
+                    className="flex items-center text-red-500 cursor-pointer"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sign Out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           ) : (
             <>

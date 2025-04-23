@@ -1,15 +1,63 @@
 # Match Matrix
 
-Match Matrix is a job matching application that connects job seekers with employers based on skills and preferences.
+A job matching platform connecting job seekers with employers.
+
+## Setup Instructions
+
+### Prerequisites
+
+- Node.js (v16+)
+- npm or yarn
+- Supabase account
+
+### Installation
+
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Create a `.env` file in the root directory with the following variables:
+   ```
+   VITE_SUPABASE_URL=your_supabase_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   VITE_SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+   ```
+
+### Database Setup
+
+1. Run the pgmigrate function creation script in the Supabase SQL Editor:
+
+   - Copy the contents of `migrations/create_pgmigrate_function.sql`
+   - Paste and run it in the Supabase SQL Editor
+
+2. Run the database migrations:
+   ```bash
+   npm run db:migrate
+   ```
+
+### Running the Application
+
+1. Start the development server:
+   ```bash
+   npm run dev
+   ```
+2. Open your browser and navigate to: `http://localhost:5173`
 
 ## Features
 
-- User authentication for job seekers and employers
-- Profile creation and management for both user types
-- Job posting for employers
-- Job searching and filtering for job seekers
-- Skill-based matching algorithm
-- Application tracking system
+- User authentication with Supabase
+- Profile setup for job seekers and employers
+- Job posting and application management
+- Skill-based matching
+
+## Project Structure
+
+- `/src`: Source code
+  - `/components`: UI components
+  - `/lib`: Utilities and API connections
+  - `/pages`: Page components
+- `/migrations`: Database migration scripts
 
 ## Tech Stack
 
