@@ -1,0 +1,55 @@
+# Match Matrix Project Rules
+
+## Code Style
+
+- Use functional React components exclusively
+- Use TypeScript for all new code
+- Organize imports alphabetically
+- Prefer named exports over default exports
+- Use destructuring for props
+- Use implicit return for simple components
+
+## Component Patterns
+
+- Place UI components in src/components/ui/
+- Feature-specific components go in src/components/[feature-name]/
+- Page components go in src/pages/
+- All component files use PascalCase naming (e.g., Button.tsx)
+- Use `.tsx` extension for all React components
+
+## State Management
+
+- Use React hooks for component-level state
+- Use React Context for shared state
+- Use TanStack Query for server state
+
+## Styling
+
+- Use Tailwind CSS for styling
+- Follow the shadcn/ui component patterns
+- Use the cn utility for conditional class names
+- Use CSS variables for theming
+
+## Form Handling
+
+- Use React Hook Form for form state management
+- Use Zod for form validation
+- Create reusable form components
+
+## File Structure
+
+- Group related files by feature or domain
+- Keep component files small and focused
+- Extract complex logic to custom hooks
+
+## Testing
+
+- Write tests for critical user flows
+- Test components in isolation
+- Use mock data for testing
+
+## Commits
+
+- Use descriptive commit messages
+- Group related changes in a single commit
+- Format commit messages as: `feat/fix/chore/docs/refactor: description`

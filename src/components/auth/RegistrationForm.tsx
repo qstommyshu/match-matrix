@@ -1,6 +1,5 @@
-
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -9,16 +8,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "../../lib/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 interface CommonFormData {
   email: string;
@@ -40,69 +36,102 @@ const RegistrationForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("candidate");
   const [step, setStep] = useState(1);
-  
+
   // Form data
   const [candidateData, setCandidateData] = useState<CandidateFormData>({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    fullName: '',
+    email: "",
+    password: "",
+    confirmPassword: "",
+    fullName: "",
   });
-  
+
   const [companyData, setCompanyData] = useState<CompanyFormData>({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    companyName: '',
-    industry: '',
+    email: "",
+    password: "",
+    confirmPassword: "",
+    companyName: "",
+    industry: "",
   });
-  
+
+  const { signUp } = useAuth();
+  const navigate = useNavigate();
+
   // Handle form input changes
   const handleCandidateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setCandidateData(prev => ({ ...prev, [name]: value }));
+    setCandidateData((prev) => ({ ...prev, [name]: value }));
   };
-  
+
   const handleCompanyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setCompanyData(prev => ({ ...prev, [name]: value }));
+    setCompanyData((prev) => ({ ...prev, [name]: value }));
   };
-  
+
   // Handle tab change
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     setStep(1); // Reset step when changing tabs
   };
-  
+
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    
-    try {
-      // This will be replaced with actual Supabase auth when connected
-      const formData = activeTab === "candidate" ? candidateData : companyData;
-      console.log('Registration attempt:', { userType: activeTab, formData });
-      
+
+    // Validate passwords match
+    if (
+      activeTab === "candidate"
+        ? candidateData.password !== candidateData.confirmPassword
+        : companyData.password !== companyData.confirmPassword
+    ) {
       toast({
-        title: "Please connect Supabase",
-        description: "This feature requires Supabase connection to work.",
+        title: "Invalid input",
+        description: "Passwords do not match",
+        variant: "destructive",
       });
-      
-      // Simulating API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    } catch (error) {
-      console.error('Registration error:', error);
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const formData = activeTab === "candidate" ? candidateData : companyData;
+      console.log("Registration attempt:", { userType: activeTab, formData });
+
+      const { data, error } = await signUp(formData.email, formData.password);
+
+      if (error) {
+        console.error("Registration error:", error);
+        toast({
+          title: "Registration failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        // Successfully registered
+        toast({
+          title: "Registration successful",
+          description:
+            "Please check your email for verification. Redirecting to login...",
+        });
+
+        // In a real app, you'd want to store the user type in your database
+        // For now, we're just simulating this
+        setTimeout(() => {
+          navigate("/login");
+        }, 3000);
+      }
+    } catch (err) {
+      console.error("An unexpected error occurred:", err);
       toast({
         title: "Registration failed",
-        description: "There was a problem creating your account.",
+        description: "An unexpected error occurred",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   // Validation checks
   const validateCommonFields = (data: CommonFormData) => {
     if (!data.email || !data.password || !data.confirmPassword) return false;
@@ -110,7 +139,7 @@ const RegistrationForm = () => {
     if (data.password.length < 8) return false;
     return true;
   };
-  
+
   // Next step handler
   const handleNextStep = () => {
     const formData = activeTab === "candidate" ? candidateData : companyData;
@@ -119,12 +148,13 @@ const RegistrationForm = () => {
     } else {
       toast({
         title: "Invalid input",
-        description: "Please check all fields and ensure passwords match and are at least 8 characters.",
+        description:
+          "Please check all fields and ensure passwords match and are at least 8 characters.",
         variant: "destructive",
       });
     }
   };
-  
+
   // Render steps
   const renderStep1 = () => (
     <CardContent className="space-y-4">
@@ -136,8 +166,14 @@ const RegistrationForm = () => {
           type="email"
           placeholder="name@example.com"
           required
-          value={activeTab === "candidate" ? candidateData.email : companyData.email}
-          onChange={activeTab === "candidate" ? handleCandidateChange : handleCompanyChange}
+          value={
+            activeTab === "candidate" ? candidateData.email : companyData.email
+          }
+          onChange={
+            activeTab === "candidate"
+              ? handleCandidateChange
+              : handleCompanyChange
+          }
           disabled={isLoading}
         />
       </div>
@@ -149,8 +185,16 @@ const RegistrationForm = () => {
           type="password"
           placeholder="********"
           required
-          value={activeTab === "candidate" ? candidateData.password : companyData.password}
-          onChange={activeTab === "candidate" ? handleCandidateChange : handleCompanyChange}
+          value={
+            activeTab === "candidate"
+              ? candidateData.password
+              : companyData.password
+          }
+          onChange={
+            activeTab === "candidate"
+              ? handleCandidateChange
+              : handleCompanyChange
+          }
           disabled={isLoading}
         />
       </div>
@@ -162,14 +206,22 @@ const RegistrationForm = () => {
           type="password"
           placeholder="********"
           required
-          value={activeTab === "candidate" ? candidateData.confirmPassword : companyData.confirmPassword}
-          onChange={activeTab === "candidate" ? handleCandidateChange : handleCompanyChange}
+          value={
+            activeTab === "candidate"
+              ? candidateData.confirmPassword
+              : companyData.confirmPassword
+          }
+          onChange={
+            activeTab === "candidate"
+              ? handleCandidateChange
+              : handleCompanyChange
+          }
           disabled={isLoading}
         />
       </div>
     </CardContent>
   );
-  
+
   const renderCandidateStep2 = () => (
     <CardContent className="space-y-4">
       <div className="space-y-2">
@@ -188,7 +240,7 @@ const RegistrationForm = () => {
       {/* More candidate-specific fields can be added here */}
     </CardContent>
   );
-  
+
   const renderCompanyStep2 = () => (
     <CardContent className="space-y-4">
       <div className="space-y-2">
@@ -220,16 +272,18 @@ const RegistrationForm = () => {
       {/* More company-specific fields can be added here */}
     </CardContent>
   );
-  
+
   return (
     <Card className="w-full max-w-md mx-auto glass-card">
       <CardHeader>
-        <CardTitle className="text-2xl font-bold text-center">Create an Account</CardTitle>
+        <CardTitle className="text-2xl font-bold text-center">
+          Create an Account
+        </CardTitle>
         <CardDescription className="text-center">
           Sign up to find your perfect career match
         </CardDescription>
       </CardHeader>
-      
+
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <div className="px-6">
           <TabsList className="grid w-full grid-cols-2">
@@ -237,20 +291,20 @@ const RegistrationForm = () => {
             <TabsTrigger value="company">We're a Company</TabsTrigger>
           </TabsList>
         </div>
-        
+
         <form onSubmit={handleSubmit}>
           <TabsContent value="candidate">
             {step === 1 ? renderStep1() : renderCandidateStep2()}
           </TabsContent>
-          
+
           <TabsContent value="company">
             {step === 1 ? renderStep1() : renderCompanyStep2()}
           </TabsContent>
-          
+
           <CardFooter className="flex flex-col space-y-4">
             {step === 1 ? (
-              <Button 
-                type="button" 
+              <Button
+                type="button"
                 className="w-full bg-gradient-to-r from-neon-purple to-neon-blue hover:opacity-90 transition-opacity"
                 onClick={handleNextStep}
                 disabled={isLoading}
@@ -258,19 +312,19 @@ const RegistrationForm = () => {
                 Next Step
               </Button>
             ) : (
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="w-full bg-gradient-to-r from-neon-purple to-neon-blue hover:opacity-90 transition-opacity"
                 disabled={isLoading}
               >
                 {isLoading ? "Creating Account..." : "Create Account"}
               </Button>
             )}
-            
+
             {step === 2 && (
-              <Button 
-                type="button" 
-                variant="ghost" 
+              <Button
+                type="button"
+                variant="ghost"
                 className="w-full"
                 onClick={() => setStep(1)}
                 disabled={isLoading}
@@ -278,16 +332,18 @@ const RegistrationForm = () => {
                 Back
               </Button>
             )}
-            
+
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t border-gray-300"></span>
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="bg-white px-2 text-gray-500">Or continue with</span>
+                <span className="bg-white px-2 text-gray-500">
+                  Or continue with
+                </span>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <Button variant="outline" type="button" disabled={isLoading}>
                 <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
@@ -311,16 +367,23 @@ const RegistrationForm = () => {
                 Google
               </Button>
               <Button variant="outline" type="button" disabled={isLoading}>
-                <svg className="h-5 w-5 mr-2 text-[#1877F2]" fill="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="h-5 w-5 mr-2 text-[#1877F2]"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" />
                 </svg>
                 Facebook
               </Button>
             </div>
-            
+
             <div className="text-center text-sm">
               Already have an account?{" "}
-              <Link to="/login" className="text-neon-purple hover:text-neon-blue font-medium transition-colors">
+              <Link
+                to="/login"
+                className="text-neon-purple hover:text-neon-blue font-medium transition-colors"
+              >
                 Sign in
               </Link>
             </div>

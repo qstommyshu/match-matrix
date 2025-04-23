@@ -1,4 +1,102 @@
-# Welcome to your Lovable project
+# Match Matrix
+
+Match Matrix is a job matching application that connects job seekers with employers based on skills and preferences.
+
+## Features
+
+- User authentication for job seekers and employers
+- Profile creation and management for both user types
+- Job posting for employers
+- Job searching and filtering for job seekers
+- Skill-based matching algorithm
+- Application tracking system
+
+## Tech Stack
+
+- **Frontend**: React, TypeScript, Tailwind CSS
+- **Backend**: Supabase (Authentication, Database, Storage)
+- **Framework**: Next.js
+- **Styling**: Tailwind CSS with shadcn/ui components
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v14 or later)
+- npm or yarn
+- Supabase account
+
+### Installation
+
+1. Clone the repository
+
+   ```bash
+   git clone <repository-url>
+   cd match-matrix
+   ```
+
+2. Install dependencies
+
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
+
+3. Set up environment variables
+   Create a `.env.local` file in the root directory with the following content:
+
+   ```
+   VITE_SUPABASE_URL=your_supabase_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+
+4. Start the development server
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   ```
+
+### Supabase Setup
+
+1. Create a new project in Supabase
+2. Get your project URL and anon key from the Settings > API section
+3. Add these to your `.env.local` file
+4. Run the migrations:
+   - Go to the SQL Editor in your Supabase dashboard
+   - Copy the contents of `src/db/migrations/01_initial_schema.sql` and run it
+   - Copy the contents of `src/db/migrations/02_seed_initial_data.sql` and run it
+
+## Project Structure
+
+```
+match-matrix/
+├── memory-bank/       # Project documentation and planning
+├── public/            # Static assets
+├── src/
+│   ├── components/    # UI components
+│   │   ├── auth/      # Authentication components
+│   │   └── ui/        # Reusable UI components
+│   ├── db/            # Database migrations and utilities
+│   ├── hooks/         # Custom React hooks
+│   ├── lib/           # Utilities and services
+│   └── pages/         # Page components
+└── .env.local         # Environment variables (not committed)
+```
+
+## Database Schema
+
+The database includes the following tables:
+
+- `profiles`: Basic user information
+- `job_seeker_profiles`: Extended profile for job seekers
+- `employer_profiles`: Extended profile for employers
+- `skills`: Available skills
+- `user_skills`: Skills associated with users
+- `jobs`: Job listings
+- `job_skills`: Skills required for jobs
+- `applications`: Job applications
 
 ## Project info
 
@@ -49,16 +147,6 @@ npm run dev
 - Select the "Codespaces" tab.
 - Click on "New codespace" to launch a new Codespace environment.
 - Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
 
 ## How can I deploy this project?
 
