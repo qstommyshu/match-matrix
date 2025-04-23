@@ -38,9 +38,9 @@
   - [x] Implement skills fetching from Supabase
   - [x] Add skills update functionality
   - [x] Show real user skills on profile
-- [ ] Implement profile editing
+- [x] Implement profile editing (Basic via EditProfilePage)
 - [ ] Add profile picture upload functionality
-- [ ] Create profile completion indicator
+- [x] Create profile completion indicator (Basic on JobSeekerDashboard)
 
 ## UI Development
 
@@ -50,21 +50,24 @@
   - [x] Create Employer dashboard page
   - [x] Implement dashboard routing container
   - [x] Add dashboard route to App router
-  - [ ] Populate dashboards with real data/widgets
-- [ ] Implement navigation
-- [ ] Create job listing components
+  - [x] Populate dashboards with real data/widgets (Employer jobs, Job seeker recommendations)
+- [ ] Implement navigation (Header exists, needs refinement)
+- [x] Create job listing components (Used in EmployerDashboard, JobSearchPage)
 - [x] Develop profile creation forms
-- [ ] Design job search interface
+- [x] Design job search interface (JobSearchPage created)
 
 ## Core Features
 
-- [ ] Implement job posting functionality
-- [ ] Create job search with filters
+- [x] Implement job posting functionality (PostJobPage, PostJobForm)
+- [x] Create job search (JobSearchPage - basic, no filters yet)
+  - [ ] Add filtering to job search
+- [x] Implement job viewing (JobDetailPage)
+- [x] Implement job editing (EditJobPage reusing PostJobForm)
 - [ ] Develop matching algorithm
   - [ ] Define matching criteria
   - [x] Create skills and preference tables
   - [ ] Implement scoring system
-  - [ ] Build recommendation engine
+  - [ ] Build recommendation engine (Basic fetch in JobSeekerDashboard)
 - [ ] Implement application system
 - [ ] Add notification system
 

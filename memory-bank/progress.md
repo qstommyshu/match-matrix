@@ -31,6 +31,7 @@
 - Job seeker profile form created
 - Employer profile form created
 - Form validation using React Hook Form and Zod
+- Basic profile editing implemented
 
 ### Skills Management
 
@@ -43,46 +44,56 @@
 
 - Basic dashboard layouts created (Job Seeker & Employer)
 - Dashboard routing implemented
+- Employer Dashboard populated with job listings
+- Job Seeker Dashboard populated with job recommendations (basic)
+- Job listing components created and used
+- Basic Job Search page created
+
+### Job Management (Core Features)
+
+- Job posting form (`PostJobForm.tsx`) created and functional
+- Job creation (`createJob`) implemented
+- Job viewing page (`JobDetailPage.tsx`) created
+- Job editing page (`EditJobPage.tsx`) created, reusing `PostJobForm`
+- Job updating (`updateJob`) implemented
+- Basic job search page (`JobSearchPage.tsx`) implemented (fetches all jobs)
 
 ## In Progress
 
 ### User Interface
 
-- Implementing navigation system
-- Building job listing components
-- Populating dashboards with real data & widgets
+- Refining navigation system (Header)
+- Implementing filtering/sorting on Job Search page
 
 ### Core Functionality
 
-- Designing matching algorithm
-- Planning skills and preferences data structure
+- Designing/Implementing matching algorithm
+- Building recommendation engine (beyond basic fetch)
+- Implementing application system
 
 ## Up Next
 
 ### User Experience
 
-- Profile editing functionality
 - File upload for profile pictures
-- Profile completion indicators
+- Enhanced profile completion indicators/guidance
+- Real-time notifications
 
 ### Matching System
 
-- Implement database tables for skills and preferences
-- Create matching algorithm
+- Implement database tables for skills and preferences (if not already done)
+- Create matching algorithm scoring
 - Build recommendation engine
 
 ### Job Management
 
-- Job posting functionality for employers
-- Job search and filtering for job seekers
-- Application tracking system
+- Add filtering/sorting to Job Search page
+- Implement application tracking system
+- Allow employers to manage job status (e.g., close, archive)
 
 ## Current Build Status
 
 - Project builds successfully
-- Authentication flow components are ready
-- Database schema is designed and ready for implementation
-- Profile management is implemented
-- Skills management is completed
-- Basic dashboard structure and routing are in place
-- Need to connect to actual Supabase project and run migrations
+- Core auth, profile, and job CRUD operations are functional.
+- Basic dashboards provide views of relevant data.
+- Need to refine search/filtering, implement application flow, and build matching logic.

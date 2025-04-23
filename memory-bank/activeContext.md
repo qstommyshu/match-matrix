@@ -2,35 +2,37 @@
 
 ## Current Development Focus
 
-- Implementing UI components for profile views and dashboards.
-- Setting up dashboard routing and structure.
-- Adding skills management functionality to the candidate profile.
+- Refinement of Job Seeker and Employer dashboards.
+- Implementation of core job management functionalities (posting, viewing, editing, searching).
+- Connecting dashboard components to real data.
 
 ## Technical Challenges
 
-- Efficient implementation of the matching algorithm.
-- Creating user-friendly interfaces for job seekers and employers.
-- Handling profile data synchronization with Supabase.
-- Building responsive layouts for different device sizes.
-- Managing user skills with real-time updates to the database.
-- Populating dashboard widgets with dynamic data.
+- Ensuring efficient data fetching and state management for job listings and details.
+- Handling routing and authorization for job-related pages.
+- Reusing form components effectively for both creation and editing.
+- Implementing basic job recommendations/display on dashboards.
+- Addressing type mismatches and linter errors during implementation.
 
 ## Next Tasks
 
-1. Complete profile editing functionality.
-2. Implement navigation system (e.g., sidebar or header nav).
-3. Populate dashboard widgets with data (or more detailed placeholders).
-4. Begin work on job posting functionality for employers.
-5. Define matching algorithm requirements.
-6. Implement match scoring and recommendation engine.
+1.  Implement filtering and sorting on the `JobSearchPage`.
+2.  Begin implementation of the application system (Apply button functionality, storing applications).
+3.  Refine job recommendations logic beyond simple fetching.
+4.  Enhance employer job management (e.g., changing status, viewing applicants).
+5.  Address remaining UI polish and navigation improvements.
 
 ## Current Status
 
-- Authentication setup is complete.
-- Database migrations and schema structure are mostly finalized.
-- Migration documentation updated.
-- Profile management system and forms implemented.
-- Skills management functionality implemented.
-- Basic dashboard pages (Job Seeker, Employer) and routing container created.
-- Dashboard route added to main application router.
-- Need to implement remaining core functionality (job posting, search, matching, applications).
+- Authentication and profile management are stable.
+- Database migrations are up-to-date.
+- **Job Management:**
+  - Employers can post new jobs (`PostJobPage`).
+  - Employers can view their posted jobs on their dashboard (`EmployerDashboardPage`).
+  - Employers can view details of a specific job (`JobDetailPage`).
+  - Employers can edit their existing jobs (`EditJobPage`).
+  - Job seekers can view job details (`JobDetailPage`).
+  - A basic job search page exists (`JobSearchPage`), listing all jobs.
+  - Job seeker dashboard shows recent jobs (`JobSeekerDashboardPage`).
+- Routing for job-related pages is implemented in `App.tsx`.
+- **Next Steps:** Focus on job search refinement, application system, and improved recommendations.
