@@ -18,6 +18,10 @@ export interface JobSeekerProfile {
   years_of_experience: number | null;
   education: string | null;
   resume_url: string | null;
+  desired_role: string | null;
+  open_to: string | null;
+  salary_expectation: string | null;
+  profile_completeness: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -30,6 +34,9 @@ export interface EmployerProfile {
   website: string | null;
   logo_url: string | null;
   company_description: string | null;
+  location: string | null;
+  benefits: string[] | null;
+  profile_completeness: number | null;
   created_at: string;
   updated_at: string;
 }

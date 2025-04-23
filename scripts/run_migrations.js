@@ -3,15 +3,17 @@ import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
 
-// Load environment variables
-dotenv.config();
+// Load environment variables from .env.local
+dotenv.config({ path: ".env.local" });
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseServiceKey = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+const supabaseServiceKey =
+  process.env.VITE_SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseServiceKey) {
   console.error(
-    "Missing Supabase environment variables. Please check your .env file."
+    "Missing Supabase environment variables. Please check your .env.local file."
   );
   process.exit(1);
 }
@@ -32,6 +34,7 @@ async function runMigration() {
     const sql = fs.readFileSync(migrationPath, "utf8");
 
     // Execute SQL
+    console.log("Connecting to Supabase...");
     const { error } = await supabase.rpc("pgmigrate", { query: sql });
 
     if (error) {

@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, UserCircle, LogOut } from "lucide-react";
+import { ChevronDown, UserCircle, LogOut, LayoutDashboard } from "lucide-react";
 
 const Header = () => {
   const { user, signOut } = useAuth();
@@ -52,20 +52,6 @@ const Header = () => {
           >
             Pricing
           </Link>
-
-          {/* Show profile-specific links when user is logged in and has a profile */}
-          {user && !loading && hasProfile() && (
-            <>
-              {isJobSeeker() && (
-                <Link
-                  to="/candidate-profile"
-                  className="text-sm font-medium hover:text-neon-purple transition-colors"
-                >
-                  My Profile
-                </Link>
-              )}
-            </>
-          )}
         </nav>
 
         <div className="flex items-center gap-4">
@@ -98,19 +84,32 @@ const Header = () => {
                   <DropdownMenuSeparator />
 
                   {hasProfile() && (
-                    <DropdownMenuItem asChild>
-                      <Link
-                        to={
-                          isJobSeeker()
-                            ? "/candidate-profile"
-                            : "/company-profile"
-                        }
-                        className="flex items-center cursor-pointer"
-                      >
-                        <UserCircle className="mr-2 h-4 w-4" />
-                        <span>My Profile</span>
-                      </Link>
-                    </DropdownMenuItem>
+                    <>
+                      {/* Dashboard Link */}
+                      <DropdownMenuItem asChild>
+                        <Link
+                          to="/dashboard"
+                          className="flex items-center cursor-pointer"
+                        >
+                          <LayoutDashboard className="mr-2 h-4 w-4" />
+                          <span>Dashboard</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      {/* My Profile Link */}
+                      <DropdownMenuItem asChild>
+                        <Link
+                          to={
+                            isJobSeeker()
+                              ? "/candidate-profile"
+                              : "/company-profile"
+                          }
+                          className="flex items-center cursor-pointer"
+                        >
+                          <UserCircle className="mr-2 h-4 w-4" />
+                          <span>My Profile</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
                   )}
 
                   <DropdownMenuItem

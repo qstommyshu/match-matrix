@@ -2,31 +2,35 @@
 
 ## Current Development Focus
 
-- Creating a Supabase project on Supabase.com
-- Setting up actual credentials in environment variables
-- Running the database migrations
-- Developing UI components for job listings and search
+- Implementing UI components for profile views and dashboards.
+- Setting up dashboard routing and structure.
+- Adding skills management functionality to the candidate profile.
 
 ## Technical Challenges
 
-- Connecting Supabase with Next.js (client setup completed)
-- Implementing an efficient job matching algorithm
-- Creating user-friendly interfaces for job seekers and employers
-- Handling file uploads for resumes and company logos
+- Efficient implementation of the matching algorithm.
+- Creating user-friendly interfaces for job seekers and employers.
+- Handling profile data synchronization with Supabase.
+- Building responsive layouts for different device sizes.
+- Managing user skills with real-time updates to the database.
+- Populating dashboard widgets with dynamic data.
 
 ## Next Tasks
 
-1. Create Supabase project on Supabase.com
-2. Set up environment variables with actual Supabase credentials
-3. Run the database migrations
-4. Create user profile completion UI
-5. Develop job posting UI for employers
-6. Implement job search with filters for job seekers
+1. Complete profile editing functionality.
+2. Implement navigation system (e.g., sidebar or header nav).
+3. Populate dashboard widgets with data (or more detailed placeholders).
+4. Begin work on job posting functionality for employers.
+5. Define matching algorithm requirements.
+6. Implement match scoring and recommendation engine.
 
 ## Current Status
 
-- Authentication setup is complete
-- Database schema is designed and ready for implementation
-- Database utility functions are implemented
-- Profile management system is in place
-- Need to connect to actual Supabase project and run migrations
+- Authentication setup is complete.
+- Database migrations and schema structure are mostly finalized.
+- Migration documentation updated.
+- Profile management system and forms implemented.
+- Skills management functionality implemented.
+- Basic dashboard pages (Job Seeker, Employer) and routing container created.
+- Dashboard route added to main application router.
+- Need to implement remaining core functionality (job posting, search, matching, applications).

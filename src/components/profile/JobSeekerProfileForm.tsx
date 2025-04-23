@@ -45,7 +45,7 @@ interface JobSeekerProfileFormProps {
     fullName?: string;
     full_name?: string;
     email?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 

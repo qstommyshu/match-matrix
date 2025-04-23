@@ -23,6 +23,10 @@ CREATE TABLE job_seeker_profiles (
   years_of_experience INTEGER,
   education TEXT,
   resume_url TEXT,
+  desired_role TEXT,
+  open_to TEXT,
+  salary_expectation TEXT,
+  profile_completeness NUMERIC DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -37,7 +41,10 @@ CREATE TABLE employer_profiles (
   logo_url TEXT,
   company_description TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  location TEXT,
+  benefits TEXT[],
+  profile_completeness NUMERIC DEFAULT 0
 );
 
 -- Skills table

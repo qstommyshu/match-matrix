@@ -9,7 +9,8 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "db:migrate": "node scripts/run_migrations.js"
+    "db:migrate": "echo \"Warning: This script is deprecated. Use db:migrate:direct instead.\" && node scripts/run_migrations.js",
+    "db:migrate:direct": "node scripts/direct_migration.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
