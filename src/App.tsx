@@ -22,6 +22,7 @@ import JobDetailPage from "./pages/JobDetailPage";
 import JobSearchPage from "./pages/JobSearchPage";
 import ManageJobsPage from "./pages/ManageJobsPage";
 import ViewApplicantsPage from "./pages/ViewApplicantsPage";
+import UserProfilePage from "./pages/UserProfilePage";
 
 const queryClient = new QueryClient();
 
@@ -140,6 +141,14 @@ const App = () => (
                   element={
                     <ProtectedRoute allowedRoles={["employer"]}>
                       <ManageJobsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/user-profile/:userId"
+                  element={
+                    <ProtectedRoute>
+                      <UserProfilePage />
                     </ProtectedRoute>
                   }
                 />

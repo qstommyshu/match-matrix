@@ -11,7 +11,12 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useProfile } from "@/lib/ProfileContext";
 import { useNavigate } from "react-router-dom";
-import { getUserSkills, UserSkill } from "@/lib/database";
+import {
+  getUserSkills,
+  UserSkill,
+  getUserExperiencesByType,
+  Experience,
+} from "@/lib/database";
 import { toast } from "@/components/ui/use-toast";
 import { UpdateSkillsModal } from "./UpdateSkillsModal";
 import { Loader2 } from "lucide-react";
@@ -20,7 +25,12 @@ const CandidateProfile = () => {
   const { profile, jobSeekerProfile, loading, refreshProfile } = useProfile();
   const navigate = useNavigate();
   const [userSkills, setUserSkills] = useState<UserSkill[]>([]);
+  const [workExperiences, setWorkExperiences] = useState<Experience[]>([]);
+  const [educationExperiences, setEducationExperiences] = useState<
+    Experience[]
+  >([]);
   const [isLoadingSkills, setIsLoadingSkills] = useState(false);
+  const [isLoadingExperiences, setIsLoadingExperiences] = useState(false);
   const [isUpdateSkillsModalOpen, setIsUpdateSkillsModalOpen] = useState(false);
 
   useEffect(() => {
@@ -45,51 +55,66 @@ const CandidateProfile = () => {
         }
       };
       fetchSkills();
+
+      // Fetch work and education experiences
+      const fetchExperiences = async () => {
+        setIsLoadingExperiences(true);
+        try {
+          // Fetch work experiences
+          const { experiences: workExp, error: workError } =
+            await getUserExperiencesByType(profile.id, "work");
+
+          if (workError) throw workError;
+          setWorkExperiences(workExp || []);
+
+          // Fetch education experiences
+          const { experiences: eduExp, error: eduError } =
+            await getUserExperiencesByType(profile.id, "education");
+
+          if (eduError) throw eduError;
+          setEducationExperiences(eduExp || []);
+        } catch (error) {
+          console.error("Failed to fetch user experiences:", error);
+          toast({
+            title: "Error",
+            description: "Could not load your experiences.",
+            variant: "destructive",
+          });
+        } finally {
+          setIsLoadingExperiences(false);
+        }
+      };
+      fetchExperiences();
     }
   }, [profile?.id]);
 
-  const additionalData = {
-    workExperience: [
-      {
-        title: "Senior Software Engineer",
-        company: "TechCorp",
-        location: "San Francisco, CA",
-        startDate: "2020-03",
-        endDate: null,
-        isCurrentRole: true,
-        description:
-          "Leading development of microservices architecture and mentoring junior developers.",
-      },
-      {
-        title: "Software Engineer",
-        company: "InnovateTech",
-        location: "Seattle, WA",
-        startDate: "2018-01",
-        endDate: "2020-02",
-        isCurrentRole: false,
-        description: "Developed and maintained front-end React applications.",
-      },
-    ],
-    education: [
-      {
-        degree: "Master of Science in Computer Science",
-        institution: "Stanford University",
-        location: "Stanford, CA",
-        startDate: "2016-09",
-        endDate: "2018-06",
-      },
-      {
-        degree: "Bachelor of Science in Computer Engineering",
-        institution: "University of Washington",
-        location: "Seattle, WA",
-        startDate: "2012-09",
-        endDate: "2016-06",
-      },
-    ],
-    profileCompleteness: profile && jobSeekerProfile ? 85 : 50,
+  // Calculate profile completeness based on data
+  const calculateProfileCompleteness = () => {
+    if (!profile || !jobSeekerProfile) return 0;
+
+    let completedItems = 0;
+    const totalItems = 10; // Adjust the total based on your requirements
+
+    // Check basic profile
+    if (profile.full_name) completedItems++;
+    if (profile.email) completedItems++;
+
+    // Check job seeker profile
+    if (jobSeekerProfile.headline) completedItems++;
+    if (jobSeekerProfile.bio) completedItems++;
+    if (jobSeekerProfile.location) completedItems++;
+    if (jobSeekerProfile.years_of_experience) completedItems++;
+    if (jobSeekerProfile.desired_role) completedItems++;
+    if (jobSeekerProfile.open_to) completedItems++;
+
+    // Check extra items
+    if (userSkills.length > 0) completedItems++;
+    if (workExperiences.length > 0) completedItems++;
+
+    return Math.round((completedItems / totalItems) * 100);
   };
 
-  if (loading) {
+  if (loading || isLoadingExperiences) {
     return (
       <div className="container mx-auto py-8 px-4 flex justify-center items-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -115,6 +140,17 @@ const CandidateProfile = () => {
   const handleSkillsUpdate = () => {
     refreshProfile();
   };
+
+  // Format date to display in a readable format
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+    });
+  };
+
+  const profileCompleteness = calculateProfileCompleteness();
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -147,12 +183,9 @@ const CandidateProfile = () => {
             <div className="flex flex-col">
               <div className="text-sm text-gray-600">Profile Completeness</div>
               <div className="flex items-center gap-2">
-                <Progress
-                  value={additionalData.profileCompleteness}
-                  className="h-2 w-40"
-                />
+                <Progress value={profileCompleteness} className="h-2 w-40" />
                 <span className="text-sm font-medium">
-                  {additionalData.profileCompleteness}%
+                  {profileCompleteness}%
                 </span>
               </div>
             </div>
@@ -309,40 +342,54 @@ const CandidateProfile = () => {
                       Your professional journey so far
                     </CardDescription>
                   </div>
-                  <Button variant="outline" size="sm">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      navigate("/edit-profile?tab=work-experience")
+                    }
+                  >
                     Add Experience
                   </Button>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {additionalData.workExperience.map((exp, i) => (
-                    <div
-                      key={i}
-                      className="border-l-2 border-neon-purple pl-4 pb-4"
-                    >
-                      <div className="flex justify-between">
-                        <h3 className="font-semibold text-lg">{exp.title}</h3>
-                        <div className="text-sm text-gray-500">
-                          {new Date(exp.startDate).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "short",
-                          })}{" "}
-                          -{" "}
-                          {exp.isCurrentRole
-                            ? "Present"
-                            : new Date(exp.endDate!).toLocaleDateString(
-                                "en-US",
-                                { year: "numeric", month: "short" }
-                              )}
+                  {workExperiences.length > 0 ? (
+                    workExperiences.map((exp) => (
+                      <div
+                        key={exp.id}
+                        className="border-l-2 border-neon-purple pl-4 pb-4"
+                      >
+                        <div className="flex justify-between">
+                          <h3 className="font-semibold text-lg">{exp.title}</h3>
+                          <div className="text-sm text-gray-500">
+                            {formatDate(exp.start_date)} -{" "}
+                            {exp.is_current
+                              ? "Present"
+                              : formatDate(exp.end_date)}
+                          </div>
                         </div>
+                        <div className="flex items-center text-sm text-gray-600 mt-1">
+                          <span>{exp.organization}</span>
+                          {exp.location && (
+                            <>
+                              <span className="mx-2">•</span>
+                              <span>{exp.location}</span>
+                            </>
+                          )}
+                        </div>
+                        {exp.description && (
+                          <p className="mt-2 text-gray-700">
+                            {exp.description}
+                          </p>
+                        )}
                       </div>
-                      <div className="flex items-center text-sm text-gray-600 mt-1">
-                        <span>{exp.company}</span>
-                        <span className="mx-2">•</span>
-                        <span>{exp.location}</span>
-                      </div>
-                      <p className="mt-2 text-gray-700">{exp.description}</p>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-center text-gray-500 py-8">
+                      You haven't added any work experience yet. Add your
+                      professional experiences to showcase your career journey.
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -354,37 +401,52 @@ const CandidateProfile = () => {
                     <CardTitle>Education</CardTitle>
                     <CardDescription>Your academic background</CardDescription>
                   </div>
-                  <Button variant="outline" size="sm">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate("/edit-profile?tab=education")}
+                  >
                     Add Education
                   </Button>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {additionalData.education.map((edu, i) => (
-                    <div
-                      key={i}
-                      className="border-l-2 border-neon-blue pl-4 pb-4"
-                    >
-                      <div className="flex justify-between">
-                        <h3 className="font-semibold text-lg">{edu.degree}</h3>
-                        <div className="text-sm text-gray-500">
-                          {new Date(edu.startDate).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "short",
-                          })}{" "}
-                          -{" "}
-                          {new Date(edu.endDate).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "short",
-                          })}
+                  {educationExperiences.length > 0 ? (
+                    educationExperiences.map((edu) => (
+                      <div
+                        key={edu.id}
+                        className="border-l-2 border-neon-blue pl-4 pb-4"
+                      >
+                        <div className="flex justify-between">
+                          <h3 className="font-semibold text-lg">{edu.title}</h3>
+                          <div className="text-sm text-gray-500">
+                            {formatDate(edu.start_date)} -{" "}
+                            {edu.is_current
+                              ? "Present"
+                              : formatDate(edu.end_date)}
+                          </div>
                         </div>
+                        <div className="flex items-center text-sm text-gray-600 mt-1">
+                          <span>{edu.organization}</span>
+                          {edu.location && (
+                            <>
+                              <span className="mx-2">•</span>
+                              <span>{edu.location}</span>
+                            </>
+                          )}
+                        </div>
+                        {edu.description && (
+                          <p className="mt-2 text-gray-700">
+                            {edu.description}
+                          </p>
+                        )}
                       </div>
-                      <div className="flex items-center text-sm text-gray-600 mt-1">
-                        <span>{edu.institution}</span>
-                        <span className="mx-2">•</span>
-                        <span>{edu.location}</span>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-center text-gray-500 py-8">
+                      You haven't added any education yet. Add your educational
+                      background to enhance your profile.
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

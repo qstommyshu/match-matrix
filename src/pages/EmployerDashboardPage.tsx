@@ -22,28 +22,11 @@ import {
   Job,
   getEmployerReceivedApplications,
   Profile,
+  getEmployerJobsWithApplicantCount,
+  JobWithApplicantCount,
 } from "@/lib/database";
 import { toast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
-
-// Define type for received applications (matching the return type of getEmployerReceivedApplications)
-type ReceivedApplication = {
-  id: string;
-  created_at: string;
-  status: string;
-  user_id: string;
-  job: { id: string; title: string; employer_id: string } | null;
-  user: {
-    id: string;
-    full_name: string | null;
-    email: string;
-    job_seeker_profile: {
-      id: string;
-      headline: string | null;
-      years_of_experience: number | null;
-    } | null;
-  } | null;
-};
 
 export const EmployerDashboardPage: React.FC = () => {
   const { profile, employerProfile, isEmployer } = useProfile();
@@ -51,11 +34,11 @@ export const EmployerDashboardPage: React.FC = () => {
   const [postedJobs, setPostedJobs] = useState<Job[]>([]);
   const [isLoadingJobs, setIsLoadingJobs] = useState(false);
   const [jobsError, setJobsError] = useState<string | null>(null);
-  const [recentApplications, setRecentApplications] = useState<
-    ReceivedApplication[]
+  const [recentJobsWithCounts, setRecentJobsWithCounts] = useState<
+    JobWithApplicantCount[]
   >([]);
-  const [isLoadingApps, setIsLoadingApps] = useState(true);
-  const [appsError, setAppsError] = useState<string | null>(null);
+  const [isLoadingRecentJobs, setIsLoadingRecentJobs] = useState(true);
+  const [recentJobsError, setRecentJobsError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -91,35 +74,36 @@ export const EmployerDashboardPage: React.FC = () => {
   useEffect(() => {
     let isMounted = true;
     if (profile?.id && isEmployer()) {
-      const fetchRecentApps = async () => {
+      const fetchRecentJobs = async () => {
         if (!isMounted) return;
-        setIsLoadingApps(true);
-        setAppsError(null);
+        setIsLoadingRecentJobs(true);
+        setRecentJobsError(null);
         try {
-          const { applications, error } = await getEmployerReceivedApplications(
-            profile.id
+          const { jobs, error } = await getEmployerJobsWithApplicantCount(
+            profile.id,
+            5
           );
           if (!isMounted) return;
           if (error) throw error;
-          setRecentApplications(applications || []);
+          setRecentJobsWithCounts(jobs || []);
         } catch (error) {
           if (!isMounted) return;
-          console.error("Failed to fetch recent applications:", error);
+          console.error("Failed to fetch recent jobs with counts:", error);
           const errorMsg =
             error instanceof Error
               ? error.message
-              : "Could not load recent applications.";
-          setAppsError(errorMsg);
+              : "Could not load recent job data.";
+          setRecentJobsError(errorMsg);
           toast({
-            title: "Error",
+            title: "Error Loading Recent Jobs",
             description: errorMsg,
             variant: "destructive",
           });
         } finally {
-          if (isMounted) setIsLoadingApps(false);
+          if (isMounted) setIsLoadingRecentJobs(false);
         }
       };
-      fetchRecentApps();
+      fetchRecentJobs();
     }
     return () => {
       isMounted = false;
@@ -245,111 +229,63 @@ export const EmployerDashboardPage: React.FC = () => {
         </Card>
       </div>
 
-      {/* Recent Applications Card */}
+      {/* Recent Applications Card - Now shows Jobs with Applicant Counts */}
       <Card className="glass-card">
         <CardHeader>
-          <CardTitle>Recent Applications</CardTitle>
+          <CardTitle>Recent Job Activity</CardTitle>
           <CardDescription>
-            Latest candidates applying to your jobs.
+            Overview of applicants for your recent job postings.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          {isLoadingApps ? (
+        <CardContent className="space-y-4">
+          {isLoadingRecentJobs ? (
             <div className="flex justify-center items-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
-          ) : appsError ? (
-            <p className="text-red-600 text-center">Error: {appsError}</p>
-          ) : recentApplications.length > 0 ? (
-            <ul className="space-y-4">
-              {recentApplications.map((app) => {
-                // Safely access potentially nested data
-                const applicantName =
-                  app.user?.full_name || app.user?.email || "Unknown Applicant";
-                const applicantHeadline =
-                  app.user?.job_seeker_profile?.headline;
-                const experienceYears =
-                  app.user?.job_seeker_profile?.years_of_experience;
-                const jobTitle = app.job?.title || "Unknown Job";
-                const jobId = app.job?.id;
-                const appliedDate = new Date(
-                  app.created_at
-                ).toLocaleDateString();
-
-                return (
-                  <li
-                    key={app.id}
-                    className="border rounded-lg p-4 hover:shadow-md transition-shadow duration-200 glass-card-inner flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2"
+          ) : recentJobsError ? (
+            <p className="text-red-600 text-center">Error: {recentJobsError}</p>
+          ) : recentJobsWithCounts.length > 0 ? (
+            recentJobsWithCounts.map((job) => (
+              <div
+                key={job.id}
+                className="border rounded-lg p-4 hover:shadow-md transition-shadow duration-200 glass-card-inner flex justify-between items-center"
+              >
+                <div>
+                  <h3 className="font-semibold text-lg mb-1">{job.title}</h3>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                    <span>{job.applicant_count} Applicant(s)</span>
+                    <span className="mx-1">·</span>
+                    <Badge
+                      variant={job.status === "open" ? "default" : "secondary"}
+                      className={`text-xs ${
+                        job.status === "open"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      {job.status}
+                    </Badge>
+                  </div>
+                </div>
+                <div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/jobs/${job.id}/applicants`)}
                   >
-                    <div className="flex-grow">
-                      <h4 className="font-semibold">{applicantName}</h4>
-                      {applicantHeadline && (
-                        <p className="text-sm text-muted-foreground">
-                          {applicantHeadline}
-                        </p>
-                      )}
-                      {experienceYears && (
-                        <span className="text-xs text-muted-foreground">
-                          {experienceYears} years experience
-                        </span>
-                      )}
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Applied for:{" "}
-                        {jobId ? (
-                          <span
-                            className="cursor-pointer hover:underline"
-                            onClick={() => navigate(`/jobs/${jobId}`)}
-                          >
-                            {jobTitle}
-                          </span>
-                        ) : (
-                          <span>{jobTitle}</span>
-                        )}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-4 flex-shrink-0 mt-2 sm:mt-0">
-                      <Badge variant="secondary">{app.status}</Badge>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {appliedDate}
-                      </span>
-                      {/* Link to view applicant profile */}
-                      {app.user_id && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            navigate(`/user-profile/${app.user_id}`)
-                          }
-                        >
-                          View Profile
-                        </Button>
-                      )}
-                      {/* Link to view all applicants for that specific job */}
-                      {jobId && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(`/jobs/${jobId}/applicants`)}
-                        >
-                          View Applicants
-                        </Button>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+                    View Applicants
+                  </Button>
+                </div>
+              </div>
+            ))
           ) : (
             <div className="text-center text-muted-foreground py-8">
-              <Bell className="mx-auto h-12 w-12 mb-4" />
-              <p>No recent applications found.</p>
-            </div>
-          )}
-          {/* Optionally link to a full application history page for the employer */}
-          {recentApplications.length > 0 && (
-            <div className="mt-4 text-center">
-              {/* TODO: Create /employer-applications page */}
-              <Button variant="link">View All Received Applications</Button>
+              <Briefcase className="mx-auto h-12 w-12 mb-4" />
+              <p>No recent job activity to display.</p>
+              <Button className="mt-4" onClick={() => navigate("/post-job")}>
+                Post a Job
+              </Button>
             </div>
           )}
         </CardContent>

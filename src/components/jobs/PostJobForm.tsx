@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
 import { useProfile } from "@/lib/ProfileContext";
-import { createJob, updateJob, Job } from "@/lib/database";
+import { createJob, updateJob, Job, getSkills, Skill } from "@/lib/database";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -26,7 +26,22 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Check, ChevronsUpDown, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Badge } from "@/components/ui/badge";
 
 // Schema for job posting form validation
 const postJobSchema = z
@@ -44,6 +59,7 @@ const postJobSchema = z
     salary_max: z.coerce.number().positive().optional().nullable(),
     experience_level: z.string().optional(),
     status: z.enum(["open", "closed"]).optional(),
+    required_skills: z.array(z.string()).optional().default([]),
   })
   .refine(
     (data) =>
@@ -71,7 +87,31 @@ export const PostJobForm: React.FC<PostJobFormProps> = ({
   const navigate = useNavigate();
   const { profile } = useProfile(); // Get profile to extract employer_id
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [availableSkills, setAvailableSkills] = useState<Skill[]>([]);
+  const [isLoadingSkills, setIsLoadingSkills] = useState(false);
   const isEditing = !!jobId; // Determine if we are editing
+
+  // Fetch available skills
+  useEffect(() => {
+    const fetchSkills = async () => {
+      setIsLoadingSkills(true);
+      try {
+        const { skills, error } = await getSkills();
+        if (error) throw error;
+        setAvailableSkills(skills || []);
+      } catch (error) {
+        console.error("Failed to fetch skills:", error);
+        toast({
+          title: "Error",
+          description: "Could not load skills for selection.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingSkills(false);
+      }
+    };
+    fetchSkills();
+  }, []);
 
   const form = useForm<PostJobFormValues>({
     resolver: zodResolver(postJobSchema),
@@ -85,6 +125,7 @@ export const PostJobForm: React.FC<PostJobFormProps> = ({
       salary_max: initialData?.salary_max ?? null,
       experience_level: initialData?.experience_level || "",
       status: initialData?.status === "closed" ? "closed" : "open",
+      required_skills: initialData?.required_skills || [],
     },
   });
 
@@ -101,6 +142,7 @@ export const PostJobForm: React.FC<PostJobFormProps> = ({
         salary_max: initialData.salary_max ?? null,
         experience_level: initialData.experience_level || "",
         status: initialData.status === "closed" ? "closed" : "open",
+        required_skills: initialData.required_skills || [],
       });
     }
   }, [initialData, form]);
@@ -128,6 +170,7 @@ export const PostJobForm: React.FC<PostJobFormProps> = ({
           salary_max: data.salary_max,
           experience_level: data.experience_level || null,
           status: data.status || "open",
+          required_skills: data.required_skills || [],
         };
         const { job, error } = await updateJob(jobId, updateData);
         if (error) throw error;
@@ -150,6 +193,7 @@ export const PostJobForm: React.FC<PostJobFormProps> = ({
           salary_max: data.salary_max,
           experience_level: data.experience_level || null,
           status: "open",
+          required_skills: data.required_skills || [],
         };
         const { job, error } = await createJob(jobData);
         if (error) throw error;
@@ -215,6 +259,101 @@ export const PostJobForm: React.FC<PostJobFormProps> = ({
           )}
         />
 
+        {/* Required Skills */}
+        <FormField
+          control={form.control}
+          name="required_skills"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Required Skills</FormLabel>
+              <FormControl>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className={cn(
+                        "w-full justify-between h-auto min-h-10",
+                        !field.value?.length && "text-muted-foreground"
+                      )}
+                    >
+                      <div className="flex flex-wrap gap-1">
+                        {field.value?.length > 0
+                          ? field.value.map((skillName) => (
+                              <Badge
+                                variant="secondary"
+                                key={skillName}
+                                className="mr-1 mb-1"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const newValue = field.value.filter(
+                                    (s) => s !== skillName
+                                  );
+                                  field.onChange(newValue);
+                                }}
+                              >
+                                {skillName}
+                                <X className="ml-1 h-3 w-3" />
+                              </Badge>
+                            ))
+                          : "Select required skills..."}
+                      </div>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                      <CommandInput placeholder="Search skills..." />
+                      <CommandList>
+                        <CommandEmpty>
+                          {isLoadingSkills
+                            ? "Loading skills..."
+                            : "No skills found."}
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {availableSkills.map((skill) => (
+                            <CommandItem
+                              key={skill.id}
+                              value={skill.name}
+                              onSelect={() => {
+                                const currentValue = field.value || [];
+                                const isSelected = currentValue.includes(
+                                  skill.name
+                                );
+                                if (isSelected) {
+                                  field.onChange(
+                                    currentValue.filter((s) => s !== skill.name)
+                                  );
+                                } else {
+                                  field.onChange([...currentValue, skill.name]);
+                                }
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  field.value?.includes(skill.name)
+                                    ? "opacity-100"
+                                    : "opacity-0"
+                                )}
+                              />
+                              {skill.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </FormControl>
+              <FormDescription>
+                Select the key skills required for this role.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Location */}
           <FormField
@@ -250,9 +389,9 @@ export const PostJobForm: React.FC<PostJobFormProps> = ({
                   />
                 </FormControl>
                 <div className="space-y-1 leading-none">
-                  <FormLabel>Remote Position</FormLabel>
+                  <FormLabel>Remote Option</FormLabel>
                   <FormDescription>
-                    Check this if the job can be done fully remotely.
+                    Check if this job can be performed fully remotely.
                   </FormDescription>
                 </div>
               </FormItem>
@@ -270,7 +409,7 @@ export const PostJobForm: React.FC<PostJobFormProps> = ({
                 <FormLabel>Job Type</FormLabel>
                 <Select
                   onValueChange={field.onChange}
-                  value={field.value || ""}
+                  defaultValue={field.value || ""}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -278,11 +417,11 @@ export const PostJobForm: React.FC<PostJobFormProps> = ({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="Full-time">Full-time</SelectItem>
-                    <SelectItem value="Part-time">Part-time</SelectItem>
-                    <SelectItem value="Contract">Contract</SelectItem>
-                    <SelectItem value="Temporary">Temporary</SelectItem>
-                    <SelectItem value="Internship">Internship</SelectItem>
+                    <SelectItem value="full-time">Full-time</SelectItem>
+                    <SelectItem value="part-time">Part-time</SelectItem>
+                    <SelectItem value="contract">Contract</SelectItem>
+                    <SelectItem value="internship">Internship</SelectItem>
+                    <SelectItem value="temporary">Temporary</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -290,58 +429,22 @@ export const PostJobForm: React.FC<PostJobFormProps> = ({
             )}
           />
 
-          {/* Experience Level */}
-          <FormField
-            control={form.control}
-            name="experience_level"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Experience Level</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  value={field.value || ""}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select experience level" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="Entry-level">Entry-level</SelectItem>
-                    <SelectItem value="Mid-level">Mid-level</SelectItem>
-                    <SelectItem value="Senior-level">Senior-level</SelectItem>
-                    <SelectItem value="Lead">Lead</SelectItem>
-                    <SelectItem value="Manager">Manager</SelectItem>
-                    <SelectItem value="Director">Director</SelectItem>
-                    <SelectItem value="Executive">Executive</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        {/* Salary Range */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Min Salary */}
           <FormField
             control={form.control}
             name="salary_min"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Minimum Salary (Annual)</FormLabel>
+                <FormLabel>Minimum Salary ($)</FormLabel>
                 <FormControl>
                   <Input
-                    type="text"
-                    pattern="[0-9]*"
-                    inputMode="numeric"
+                    type="number"
                     placeholder="e.g., 80000"
+                    {...field}
                     value={field.value ?? ""}
                     onChange={(e) => {
                       const value = e.target.value;
-                      if (/^\d*$/.test(value)) {
-                        field.onChange(value === "" ? null : Number(value));
-                      }
+                      field.onChange(value === "" ? null : Number(value));
                     }}
                   />
                 </FormControl>
@@ -349,24 +452,23 @@ export const PostJobForm: React.FC<PostJobFormProps> = ({
               </FormItem>
             )}
           />
+
+          {/* Max Salary */}
           <FormField
             control={form.control}
             name="salary_max"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Maximum Salary (Annual)</FormLabel>
+                <FormLabel>Maximum Salary ($)</FormLabel>
                 <FormControl>
                   <Input
-                    type="text"
-                    pattern="[0-9]*"
-                    inputMode="numeric"
+                    type="number"
                     placeholder="e.g., 120000"
+                    {...field}
                     value={field.value ?? ""}
                     onChange={(e) => {
                       const value = e.target.value;
-                      if (/^\d*$/.test(value)) {
-                        field.onChange(value === "" ? null : Number(value));
-                      }
+                      field.onChange(value === "" ? null : Number(value));
                     }}
                   />
                 </FormControl>
@@ -376,7 +478,38 @@ export const PostJobForm: React.FC<PostJobFormProps> = ({
           />
         </div>
 
-        {/* Status */}
+        {/* Experience Level */}
+        <FormField
+          control={form.control}
+          name="experience_level"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Experience Level</FormLabel>
+              <Select
+                onValueChange={field.onChange}
+                defaultValue={String(field.value || "")}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select required experience level" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="entry-level">Entry-level</SelectItem>
+                  <SelectItem value="mid-level">Mid-level</SelectItem>
+                  <SelectItem value="senior-level">Senior-level</SelectItem>
+                  <SelectItem value="lead">Lead</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="director">Director</SelectItem>
+                  <SelectItem value="executive">Executive</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Status - Only show when editing */}
         {isEditing && (
           <FormField
             control={form.control}
@@ -386,7 +519,7 @@ export const PostJobForm: React.FC<PostJobFormProps> = ({
                 <FormLabel>Job Status</FormLabel>
                 <Select
                   onValueChange={field.onChange}
-                  value={field.value || "open"}
+                  defaultValue={String(field.value || "open")}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -394,16 +527,12 @@ export const PostJobForm: React.FC<PostJobFormProps> = ({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="open">
-                      Open (Visible to Job Seekers)
-                    </SelectItem>
-                    <SelectItem value="closed">
-                      Closed (Hidden from Job Seekers)
-                    </SelectItem>
+                    <SelectItem value="open">Open</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormDescription>
-                  Set the visibility of this job posting.
+                  Set to "Closed" to hide the listing from job seekers.
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -411,24 +540,15 @@ export const PostJobForm: React.FC<PostJobFormProps> = ({
           />
         )}
 
-        {/* TODO: Add Skills Section Here (potentially using a multi-select component) */}
-        {/* For now, skills need to be added/managed after job creation */}
-
         <Button
           type="submit"
           disabled={isSubmitting}
-          className="w-full md:w-auto"
+          className="w-full bg-gradient-to-r from-neon-purple to-neon-blue hover:opacity-90 transition-opacity"
         >
           {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />{" "}
-              {isEditing ? "Saving..." : "Posting..."}
-            </>
-          ) : isEditing ? (
-            "Save Changes"
-          ) : (
-            "Post Job Listing"
-          )}
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : null}
+          {isEditing ? "Update Job" : "Post Job"}
         </Button>
       </form>
     </Form>

@@ -249,88 +249,93 @@ const JobDetailPage: React.FC = () => {
               <h3 className="font-semibold text-lg mb-2 border-b pb-1">
                 Job Description
               </h3>
-              {/* Use dangerouslySetInnerHTML for potential markdown or render markdown component */}
               <div
                 className="prose prose-sm max-w-none text-muted-foreground"
-                dangerouslySetInnerHTML={{
-                  __html: job.description.replace(/\n/g, "<br />"),
-                }}
-              />
+                dangerouslySetInnerHTML={{ __html: job.description }}
+              ></div>
             </div>
 
-            {/* TODO: Add Skills section here when job skills are implemented */}
-            {/* <div>
-                             <h3 className="font-semibold text-lg mb-2 border-b pb-1">Required Skills</h3>
-                             <div className="flex flex-wrap gap-2">
-                                 {job.skills?.map(js => (
-                                     <Badge key={js.skill_id} variant="outline">{js.skill?.name}</Badge>
-                                 )) || <p className="text-sm text-muted-foreground">No specific skills listed.</p>}
-                             </div>
-                         </div> */}
+            {/* Required Skills Section */}
+            {job.required_skills && job.required_skills.length > 0 && (
+              <div>
+                <h3 className="font-semibold text-lg mb-2 border-b pb-1">
+                  Required Skills
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {job.required_skills.map((skill) => (
+                    <Badge key={skill} variant="secondary">
+                      {skill}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Sidebar Info */}
-          <div className="space-y-6">
-            <Card className="glass-card-inner">
-              <CardHeader className="p-4">
-                <CardTitle className="text-base">Job Overview</CardTitle>
+          {/* Sidebar with overview and apply button */}
+          <div className="md:col-span-1 space-y-6">
+            <Card className="bg-muted/10 border">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xl">Job Overview</CardTitle>
               </CardHeader>
-              <CardContent className="p-4 text-sm space-y-3">
-                {job.location && (
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span>
-                      {job.location} {job.remote && "(Remote Available)"}
-                    </span>
-                  </div>
-                )}
-                {!job.location && job.remote && (
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span>Fully Remote</span>
-                  </div>
-                )}
-                {job.salary_min && (
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    <span>
-                      ${job.salary_min.toLocaleString()}
-                      {job.salary_max &&
-                        ` - $${job.salary_max.toLocaleString()}`}{" "}
-                      Annually
-                    </span>
-                  </div>
-                )}
-                {job.experience_level && (
-                  <div className="flex items-center gap-2">
-                    <UserCheck className="h-4 w-4 text-muted-foreground" />
-                    <span>{job.experience_level}</span>
-                  </div>
-                )}
+              <CardContent className="space-y-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <span>
+                    {job.location || (job.remote ? "Remote" : "Not specified")}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Briefcase className="h-4 w-4 text-muted-foreground" />
+                  <span>{job.job_type || "Not specified"}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  <span>
+                    {job.salary_min && job.salary_max
+                      ? `$${job.salary_min / 1000}k - $${
+                          job.salary_max / 1000
+                        }k`
+                      : job.salary_min
+                      ? `$${job.salary_min / 1000}k+`
+                      : "Not specified"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <UserCheck className="h-4 w-4 text-muted-foreground" />
+                  <span>{job.experience_level || "Not specified"}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                  <span>
+                    Posted {new Date(job.created_at).toLocaleDateString()}
+                  </span>
+                </div>
               </CardContent>
             </Card>
 
             {/* Action Buttons */}
-            <div className="mt-6 space-y-3">
+            <div className="space-y-2">
               {isOwner ? (
-                <>
-                  <Button
-                    className="w-full"
-                    onClick={() => navigate(`/edit-job/${jobId}`)}
-                  >
-                    <Briefcase className="mr-2 h-4 w-4" /> Edit Job Posting
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => navigate(`/jobs/${jobId}/applicants`)}
-                  >
-                    <Users className="mr-2 h-4 w-4" /> View Applicants
-                  </Button>
-                </>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(`/edit-job/${jobId}`)}
+                  className="w-full"
+                >
+                  Edit Job
+                </Button>
               ) : (
-                // Render the dynamic apply button
                 getApplyButton()
+              )}
+              {/* Add button to view applicants if owner */}
+              {isOwner && (
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(`/jobs/${jobId}/applicants`)} // TODO: Create this route/page
+                  className="w-full"
+                >
+                  <Users className="mr-2 h-4 w-4" /> View Applicants
+                </Button>
               )}
             </div>
           </div>

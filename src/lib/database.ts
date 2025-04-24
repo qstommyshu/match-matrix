@@ -69,6 +69,7 @@ export interface Job {
   salary_max: number | null;
   experience_level: string | null;
   status: string;
+  required_skills: string[] | null;
   created_at: string;
   updated_at: string;
   employer?: Profile;
@@ -90,12 +91,34 @@ export interface Application {
   user_id: string;
   cover_letter: string | null;
   status: string;
+  match_score: number | null;
   created_at: string;
   updated_at: string;
   job?: Job;
   user?: Profile & {
     job_seeker_profile?: JobSeekerProfile | null;
   };
+}
+
+// Experience types
+export interface Experience {
+  id: string;
+  user_id: string;
+  type: "work" | "education";
+  title: string;
+  organization: string;
+  location: string | null;
+  start_date: string; // ISO date string
+  end_date: string | null; // ISO date string
+  is_current: boolean;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Add type for Job with Applicant Count
+export interface JobWithApplicantCount extends Job {
+  applicant_count: number;
 }
 
 // Profile functions
@@ -336,16 +359,17 @@ export const createJob = async (
   job: Omit<
     Job,
     "id" | "created_at" | "updated_at" | "employer" | "skills" | "status"
-  > & { status?: string }
+  > & { status?: string; required_skills?: string[] }
 ) => {
-  const jobDataWithDefaults = {
+  const jobDataToInsert = {
     ...job,
     status: job.status || "open",
+    required_skills: job.required_skills || [],
   };
 
   const { data, error } = await supabase
     .from("jobs")
-    .insert(jobDataWithDefaults)
+    .insert(jobDataToInsert)
     .select()
     .single();
 
@@ -398,14 +422,33 @@ export const getJobApplications = async (jobId: string) => {
       *,
       user:profiles(
         *,
-        job_seeker_profile:job_seeker_profiles(*)
+        job_seeker_profile:job_seeker_profiles(*),
+        user_skills:user_skills(*, skill:skills(name)) 
       ),
       job:jobs(*)
     `
     )
-    .eq("job_id", jobId);
+    .eq("job_id", jobId)
+    .order("created_at", { ascending: false });
 
-  return { applications: data as Application[] | null, error };
+  // Update the Application type to reflect the nested user_skills
+  // We need to redefine the user part of the type
+  type ApplicationWithUserSkills = Omit<Application, "user"> & {
+    user?: Profile & {
+      job_seeker_profile?: JobSeekerProfile | null;
+      user_skills?: { skill: { name: string } }[]; // Define the nested structure
+    };
+  };
+
+  if (error) {
+    console.error("Error fetching job applications:", error);
+    return { applications: null, error };
+  }
+
+  return {
+    applications: data as ApplicationWithUserSkills[] | null,
+    error: null,
+  };
 };
 
 export const getUserApplications = async (userId: string) => {
@@ -438,6 +481,7 @@ export const getEmployerReceivedApplications = async (
       created_at,
       status,
       user_id,
+      match_score,
       job:jobs!inner(
         id,
         title,
@@ -464,6 +508,7 @@ export const getEmployerReceivedApplications = async (
     created_at: string;
     status: string;
     user_id: string;
+    match_score: number | null;
     job: {
       id: string;
       title: string;
@@ -487,18 +532,59 @@ export const getEmployerReceivedApplications = async (
 };
 
 export const createApplication = async (
-  application: Omit<
+  applicationInput: Omit<
     Application,
-    "id" | "created_at" | "updated_at" | "job" | "user"
+    "id" | "created_at" | "updated_at" | "job" | "user" | "match_score"
   >
 ) => {
-  const { data, error } = await supabase
-    .from("applications")
-    .insert(application)
-    .select()
-    .single();
+  try {
+    // 1. Calculate the match score using the DB function
+    const { data: scoreData, error: scoreError } = await supabase.rpc(
+      "calculate_match_score",
+      {
+        p_user_id: applicationInput.user_id,
+        p_job_id: applicationInput.job_id,
+      }
+    );
 
-  return { application: data as Application | null, error };
+    if (scoreError) {
+      console.error("Error calculating match score:", scoreError);
+      // Decide if we should proceed without a score or return error
+      // Let's proceed but log the error, defaulting score to 0
+      // throw new Error("Failed to calculate match score");
+    }
+
+    const calculatedMatchScore = typeof scoreData === "number" ? scoreData : 0;
+
+    // 2. Prepare the application data with the calculated score
+    const applicationData = {
+      ...applicationInput,
+      match_score: calculatedMatchScore,
+    };
+
+    // 3. Insert the application
+    const { data, error } = await supabase
+      .from("applications")
+      .insert(applicationData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error creating application:", error);
+      throw error; // Re-throw the error after logging
+    }
+
+    return { application: data as Application | null, error: null };
+  } catch (err) {
+    console.error("Exception in createApplication:", err);
+    return {
+      application: null,
+      error:
+        err instanceof Error
+          ? err
+          : new Error("Unknown error creating application"),
+    };
+  }
 };
 
 export const updateApplicationStatus = async (
@@ -544,4 +630,199 @@ export const getUserProfileById = async (
     console.error("Error in getUserProfileById:", error);
     return null;
   }
+};
+
+// Experience functions
+export const getUserExperiences = async (userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from("experiences")
+      .select("*")
+      .eq("user_id", userId)
+      .order("start_date", { ascending: false });
+
+    if (error) {
+      console.error("Supabase error fetching experiences:", error);
+      return { experiences: null, error };
+    }
+
+    return { experiences: data as Experience[] | null, error: null };
+  } catch (err) {
+    console.error("Exception in getUserExperiences:", err);
+    return {
+      experiences: null,
+      error: err instanceof Error ? err : new Error("Unknown error"),
+    };
+  }
+};
+
+export const getUserExperiencesByType = async (
+  userId: string,
+  type: "work" | "education"
+) => {
+  try {
+    const { data, error } = await supabase
+      .from("experiences")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("type", type)
+      .order("start_date", { ascending: false });
+
+    if (error) {
+      console.error("Supabase error fetching experiences by type:", error);
+      return { experiences: null, error };
+    }
+
+    return { experiences: data as Experience[] | null, error: null };
+  } catch (err) {
+    console.error("Exception in getUserExperiencesByType:", err);
+    return {
+      experiences: null,
+      error: err instanceof Error ? err : new Error("Unknown error"),
+    };
+  }
+};
+
+export const addExperience = async (
+  experience: Omit<Experience, "id" | "created_at" | "updated_at">
+) => {
+  try {
+    console.log(
+      "database.addExperience called with:",
+      JSON.stringify(experience, null, 2)
+    );
+
+    // Validate required fields before sending to database
+    if (!experience.user_id) {
+      console.error("Missing user_id in experience data");
+      return {
+        experience: null,
+        error: new Error("Missing user_id in experience data"),
+      };
+    }
+
+    if (!experience.title) {
+      console.error("Missing title in experience data");
+      return {
+        experience: null,
+        error: new Error("Missing title in experience data"),
+      };
+    }
+
+    if (!experience.organization) {
+      console.error("Missing organization in experience data");
+      return {
+        experience: null,
+        error: new Error("Missing organization in experience data"),
+      };
+    }
+
+    if (!experience.start_date) {
+      console.error("Missing start_date in experience data");
+      return {
+        experience: null,
+        error: new Error("Missing start_date in experience data"),
+      };
+    }
+
+    const { data, error } = await supabase
+      .from("experiences")
+      .insert(experience)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Supabase error adding experience:", error);
+      return { experience: null, error };
+    }
+
+    console.log("Experience successfully added with ID:", data?.id);
+    return { experience: data as Experience | null, error: null };
+  } catch (err) {
+    console.error("Exception in addExperience:", err);
+    return {
+      experience: null,
+      error: err instanceof Error ? err : new Error("Unknown error"),
+    };
+  }
+};
+
+export const updateExperience = async (
+  id: string,
+  updates: Partial<
+    Omit<Experience, "id" | "user_id" | "created_at" | "updated_at">
+  >
+) => {
+  try {
+    const { data, error } = await supabase
+      .from("experiences")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Supabase error updating experience:", error);
+      return { experience: null, error };
+    }
+
+    return { experience: data as Experience | null, error: null };
+  } catch (err) {
+    console.error("Exception in updateExperience:", err);
+    return {
+      experience: null,
+      error: err instanceof Error ? err : new Error("Unknown error"),
+    };
+  }
+};
+
+export const deleteExperience = async (id: string) => {
+  try {
+    const { error } = await supabase.from("experiences").delete().eq("id", id);
+
+    if (error) {
+      console.error("Supabase error deleting experience:", error);
+      return { error };
+    }
+
+    return { error: null };
+  } catch (err) {
+    console.error("Exception in deleteExperience:", err);
+    return { error: err instanceof Error ? err : new Error("Unknown error") };
+  }
+};
+
+// Function to get employer jobs with applicant count
+export const getEmployerJobsWithApplicantCount = async (
+  employerId: string,
+  limit: number = 5 // Optional limit, defaults to 5
+) => {
+  const { data, error } = await supabase
+    .from("jobs")
+    .select(
+      `
+      *,
+      applications (count)
+    `
+    )
+    .eq("employer_id", employerId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("Error fetching employer jobs with applicant count:", error);
+    return { jobs: null, error };
+  }
+
+  // Map the data to include applicant_count directly
+  // Define an intermediate type for the raw Supabase response
+  type JobWithNestedCount = Job & { applications: { count: number }[] };
+
+  const jobsWithCount = data?.map((job: JobWithNestedCount) => ({
+    ...job,
+    applicant_count: job.applications[0]?.count || 0,
+    applications: undefined, // Remove the nested count array
+  })) as JobWithApplicantCount[] | null;
+
+  return { jobs: jobsWithCount, error: null };
 };
