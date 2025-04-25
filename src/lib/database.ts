@@ -92,9 +92,17 @@ export interface Application {
   user_id: string;
   cover_letter: string | null;
   status: string;
+  stage:
+    | "Applied"
+    | "Screening"
+    | "Interview"
+    | "Offer"
+    | "Rejected"
+    | "Withdrawn";
   match_score: number | null;
   created_at: string;
   updated_at: string;
+  ai_summary?: string | null;
   job?: Job;
   user?: Profile & {
     job_seeker_profile?: JobSeekerProfile | null;
@@ -836,4 +844,33 @@ export const getEmployerJobsWithApplicantCount = async (
   })) as JobWithApplicantCount[] | null;
 
   return { jobs: jobsWithCount, error };
+};
+
+// Function to update application stage
+export const updateApplicationStage = async (
+  applicationId: string,
+  stage: Application["stage"]
+) => {
+  const { data, error } = await supabase
+    .from("applications")
+    .update({ stage })
+    .eq("id", applicationId)
+    .select()
+    .single();
+
+  return { application: data as Application | null, error };
+};
+
+// Function to batch update application stages
+export const batchUpdateApplicationStage = async (
+  applicationIds: string[],
+  stage: Application["stage"]
+) => {
+  const { data, error } = await supabase.rpc("batch_update_application_stage", {
+    p_application_ids: applicationIds,
+    p_stage: stage,
+    p_user_id: (await supabase.auth.getUser()).data.user?.id,
+  });
+
+  return { results: data, error };
 };

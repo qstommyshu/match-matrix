@@ -16,6 +16,7 @@ import {
   Bell,
   Briefcase,
   Loader2,
+  Plus,
 } from "lucide-react";
 import {
   getJobs,
@@ -27,6 +28,7 @@ import {
 } from "@/lib/database";
 import { toast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const EmployerDashboardPage: React.FC = () => {
   const { profile, employerProfile, isEmployer } = useProfile();
@@ -112,9 +114,22 @@ export const EmployerDashboardPage: React.FC = () => {
 
   return (
     <div className="container mx-auto py-8 px-4 space-y-8">
-      <h1 className="text-3xl font-bold">
-        Welcome, {employerProfile?.company_name || "Employer"}!
-      </h1>
+      <PageHeader>
+        <div className="space-y-0.5">
+          <h2 className="text-3xl font-bold tracking-tight">
+            Welcome, {profile?.full_name || "User"} @{" "}
+            {employerProfile?.company_name || "Employer"}!
+          </h2>
+          <p className="text-muted-foreground">
+            Manage your job postings and review applications.
+          </p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button onClick={() => navigate("/post-job")} className="flex gap-1">
+            <Plus className="h-4 w-4" /> Post New Job
+          </Button>
+        </div>
+      </PageHeader>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Company Profile Card */}

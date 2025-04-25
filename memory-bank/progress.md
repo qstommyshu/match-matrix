@@ -92,18 +92,15 @@
 
 ## Planned Features / Up Next
 
-- **AI Applicant Summarization:**
-  - Add button to `ViewApplicantsPage` to trigger AI summary generation.
-  - Create Supabase Edge Function to call OpenAI API.
-  - Fetch applicant profile, skills, experience for prompt.
-  - Display generated summary on applicant row.
-  - (Optional) Store summary in `applications` table.
-
 ### User Experience
 
 - File upload for profile pictures
 - Enhanced profile completion indicators/guidance
 - Real-time notifications
+
+### Job Enhancements
+
+- Add Company Benefits
 
 ### Matching System
 
@@ -116,6 +113,20 @@
 - Add filtering/sorting to Job Search page
 - Allow employers to manage job status (e.g., close, archive)
 
+### Application Management
+
+- Implement Application Stages
+- Allow Employers to Change Application Stage
+- Implement Employer Batch Actions for Applications
+
+### AI Features
+
+- AI-Generated Rejection Emails
+
+### Developer Experience
+
+- Basic CI/CD Pipeline
+
 ## Current Build Status
 
 - Project builds successfully
@@ -126,6 +137,7 @@
 - Job seekers can see employer company names on job cards
 - Applicants view for employers is now sorted by match score
 - Need to refine search/filtering, implement notification system, and build matching logic
+- AI Profile Summarization feature fully implemented and operational
 
 ## 2023-08-04
 
@@ -141,3 +153,72 @@
   - Added `generateAISummary` frontend utility function
   - Set up OpenAI API key in local environment
   - Next steps: Implement the feature in the ViewApplicantsPage UI
+
+## 2023-08-06
+
+- Completed the AI Profile Summarization feature:
+  - Integrated the feature into ViewApplicantsPage
+  - Added "Summarize" button to each applicant row
+  - Implemented state management for tracking summary generation status
+  - Added UI elements to display summaries with a highlight box
+  - Fixed Edge Function database schema issues and CORS errors
+  - Added proper typing and error handling
+  - Added visual indicators for loading/error states
+  - Set up OpenAI API key in Supabase environment
+
+## 2023-08-07
+
+- **Planning:** Added new feature plans to `tasks.md`:
+  - Company Benefits integration
+  - Application Stages and employer stage management
+  - AI-Generated Rejection Emails
+  - Employer Batch Actions for applications
+  - Basic CI/CD Pipeline setup
+- Updated `progress.md` to reflect new planned features.
+
+## 2023-08-08
+
+- **Implementation:** Completed Application Stages feature:
+  - Created migration file `16_add_application_stages.sql` with:
+    - Application stage enum type
+    - New `stage` column added to applications table
+    - Logic to update existing applications based on their status
+    - RLS policy to allow employers to update stages
+    - SQL function for batch updating application stages
+  - Updated Application interface in database.ts
+  - Added `updateApplicationStage` and `batchUpdateApplicationStage` functions
+  - Enhanced ViewApplicantsPage UI with:
+    - Stage badges with appropriate colors
+    - Stage selection dropdown for employers
+    - Loading indicators for stage updates
+  - Updated status display and column layout in the applicants table
+  - Verified functionality via database migrations and UI testing
+
+## 2023-08-09
+
+- **Implementation:** Completed Employer Batch Actions for Applications:
+  - Enhanced ViewApplicantsPage with multi-select functionality:
+    - Added checkboxes to each applicant row
+    - Implemented "select all" checkbox in the table header
+    - Created visual indicator for selected applications
+  - Added batch actions toolbar with:
+    - Selection counter showing number of selected applications
+    - Stage selection dropdown for batch updates
+    - Apply button to execute batch changes
+    - Clear selection option
+  - Implemented state management for tracking selected applications
+  - Added batch update functionality to change multiple applications' stages simultaneously
+  - Implemented optimistic UI updates after batch operations
+  - Added toast notifications for success, partial success, and error states
+  - Ensured proper error handling and loading states
+  - Tested functionality with various selection and update scenarios
+
+## 2023-08-10
+
+- **UI Improvements:** Enhanced the dashboard pages with consistent headers:
+  - Created a reusable PageHeader component for consistent layout and styling
+  - Updated the Employer dashboard to display "Welcome, {full_name} @ {company_name}"
+  - Updated the Job Seeker dashboard with matching header style and layout
+  - Added action buttons directly in the header (Post Job, Find Jobs)
+  - Improved visual hierarchy with proper typography and spacing
+  - Added descriptive subheadings to explain dashboard purpose

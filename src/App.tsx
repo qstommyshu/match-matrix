@@ -23,6 +23,7 @@ import JobSearchPage from "./pages/JobSearchPage";
 import ManageJobsPage from "./pages/ManageJobsPage";
 import ViewApplicantsPage from "./pages/ViewApplicantsPage";
 import UserProfilePage from "./pages/UserProfilePage";
+import ApplicationsPage from "./pages/ApplicationsPage";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +54,14 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <DashboardPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/applications"
+                  element={
+                    <ProtectedRoute allowedRoles={["job_seeker"]}>
+                      <ApplicationsPage />
                     </ProtectedRoute>
                   }
                 />

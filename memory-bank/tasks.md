@@ -93,16 +93,90 @@
   - [x] Define function response (summary or status).
 - [x] **Frontend Utility:** Create helper function to call Edge Function.
   - [x] Add `generateAISummary` to `supabase.ts`.
-- [ ] **Frontend Integration:** Integrate the feature into `ViewApplicantsPage.tsx` (awaiting implementation).
-  - [ ] Add state management for summaries (per applicant: loading, error, data).
-  - [ ] Add UI element to display summary/loading/error.
-  - [ ] Add "Summarize" button to applicant actions.
-  - [ ] Implement button `onClick` handler to call Edge Function.
-  - [ ] Handle function response and update UI state.
-  - [ ] Implement logic to display existing stored summaries.
+- [x] **Frontend Integration:** Integrate the feature into `ViewApplicantsPage.tsx` (awaiting implementation).
+  - [x] Add state management for summaries (per applicant: loading, error, data).
+  - [x] Add UI element to display summary/loading/error.
+  - [x] Add "Summarize" button to applicant actions.
+  - [x] Implement button `onClick` handler to call Edge Function.
+  - [x] Handle function response and update UI state.
+  - [x] Implement logic to display existing stored summaries.
 - [x] **Configuration:** Set up OpenAI API key in local environment.
-  - [ ] Set up OpenAI API key in Supabase environment variables (when deploying Edge Function).
-- [ ] **Testing:** Test the end-to-end flow, error handling, and UI updates.
+  - [x] Set up OpenAI API key in Supabase environment variables (when deploying Edge Function).
+- [x] **Testing:** Test the end-to-end flow, error handling, and UI updates.
+
+## Job Enhancements
+
+- [ ] **Company Benefits Integration**
+  - [ ] **Database:** Add `benefits` column (e.g., `TEXT[]`) to `jobs` table.
+  - [ ] **Database:** Create migration file for benefits column.
+  - [ ] **Database:** Update RLS policies for `jobs` if needed (read access).
+  - [ ] **Backend:** Update `Job` type definition to include `benefits`.
+  - [ ] **Backend:** Update `getJob` function to select `benefits`.
+  - [ ] **Backend:** Update `createJob` and `updateJob` functions to handle `benefits`.
+  - [ ] **Frontend:** Add benefits input field to `PostJobForm.tsx`.
+  - [ ] **Frontend:** Display benefits section on `JobDetailPage.tsx`.
+  - [ ] **Testing:** Verify benefits are saved, updated, and displayed correctly.
+
+## Application Management Enhancements
+
+- [x] **Application Stages**
+
+  - [x] **Database:** Define standard application stages (e.g., 'Applied', 'Screening', 'Interview', 'Offer', 'Rejected', 'Withdrawn').
+  - [x] **Database:** Update `applications` table: Add a new `stage` column.
+  - [x] **Database:** Create migration file for application stage changes.
+  - [x] **Database:** Update RLS policies for `applications` (allow employer read access to stage).
+  - [x] **Backend:** Update `Application` type definition.
+  - [x] **Backend:** Update `createApplication` to set initial stage ('Applied').
+  - [x] **Backend:** Update relevant query functions (`getJobApplications`, `getUserApplications`, etc.) to select the stage.
+  - [x] **Frontend (Employer):** Display application stage badge/text on `ViewApplicantsPage.tsx`.
+  - [x] **Testing:** Verify stage is set correctly and displayed.
+
+- [x] **Employer Ability to Change Application Stage**
+
+  - [x] **Database:** Update RLS policy for `applications` to allow employers to `UPDATE` the stage column for jobs they own.
+  - [x] **Backend:** Create `updateApplicationStage` function in `database.ts`.
+  - [x] **Backend:** Define type for `updateApplicationStage` parameters and return value.
+  - [x] **Frontend (Employer):** Add UI element (e.g., dropdown menu, status buttons) to `ViewApplicantsPage.tsx` for changing stage.
+  - [x] **Frontend (Employer):** Implement `onClick` handler to call `updateApplicationStage` function.
+  - [x] **Frontend (Employer):** Update UI optimistically or refetch data after stage change.
+  - [x] **Testing:** Verify employers can change stages, RLS prevents unauthorized changes.
+
+- [x] **Employer Batch Actions for Applications**
+  - [x] **Frontend (Employer):** Add checkboxes to applicant list rows in `ViewApplicantsPage.tsx`.
+  - [x] **Frontend (Employer):** Add state management for selected applicants.
+  - [x] **Frontend (Employer):** Add batch action controls (e.g., "Change Stage to...", "Generate Rejection Email for Selected").
+  - [x] **Backend:** Create `batchUpdateApplicationStage` function (or similar) in `database.ts` or potentially an Edge Function for complex logic/atomicity.
+  - [x] **Backend:** Implement logic to handle multiple application updates securely and efficiently.
+  - [x] **Frontend (Employer):** Implement logic to call batch update function with selected applicant IDs and target stage/action.
+  - [x] **Testing:** Verify batch actions work correctly for various scenarios (stage change, etc.).
+
+## AI Features
+
+- [ ] **AI-Generated Rejection Email**
+  - [ ] **Database:** Consider adding `rejection_email_sent_at` (TIMESTAMPZ) or `generated_rejection_email` (TEXT) to `applications` table. Create migration if needed.
+  - [ ] **Backend:** Create Supabase Edge Function (`generate-rejection-email`).
+    - [ ] Implement security check (verify user is the job's employer, application belongs to job).
+    - [ ] Implement data fetching: job details, applicant profile (skills, bio, etc.), application details.
+    - [ ] Develop prompt engineering strategy for constructive feedback.
+    - [ ] Integrate OpenAI API call.
+    - [ ] Define function input (application_id, maybe custom notes) and output (email content).
+  - [ ] **Frontend Utility:** Add helper function (e.g., `generateRejectionEmail`) to `supabase.ts` to call the Edge Function.
+  - [ ] **Frontend (Employer):** Add "Generate Rejection Email" button/action on `ViewApplicantsPage.tsx` (perhaps visible when stage is 'Rejected' or as part of changing stage to 'Rejected').
+  - [ ] **Frontend (Employer):** Implement UI to trigger generation, potentially show preview, and maybe trigger sending (or just provide content).
+  - [ ] **Testing:** Test Edge Function logic, prompt effectiveness, API integration, and frontend interaction.
+
+## Developer Experience
+
+- [ ] **Basic CI/CD Pipeline**
+  - [ ] Choose CI/CD platform (e.g., GitHub Actions, Vercel, Netlify).
+  - [ ] Configure build script in `package.json` if necessary.
+  - [ ] Create workflow configuration file (e.g., `.github/workflows/deploy.yml`).
+  - [ ] Define trigger (e.g., push to `main`).
+  - [ ] Add steps: checkout, setup Node, install dependencies, build.
+  - [ ] (Optional) Add step: run tests (if tests exist).
+  - [ ] Configure deployment step (e.g., using Vercel CLI, Netlify CLI, or GitHub Actions deploy actions).
+  - [ ] Set up environment variables (Supabase URL/Key, OpenAI Key) as secrets in the CI/CD platform.
+  - [ ] **Testing:** Trigger pipeline and verify successful build and deployment.
 
 ## Testing
 
