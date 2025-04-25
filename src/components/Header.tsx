@@ -15,7 +15,8 @@ import { ChevronDown, UserCircle, LogOut, LayoutDashboard } from "lucide-react";
 
 const Header = () => {
   const { user, signOut } = useAuth();
-  const { isJobSeeker, isEmployer, hasProfile, loading } = useProfile();
+  const { profile, isJobSeeker, isEmployer, hasProfile, loading } =
+    useProfile();
 
   const handleSignOut = async () => {
     await signOut();
@@ -74,7 +75,10 @@ const Header = () => {
                     className="flex items-center gap-1 p-1"
                   >
                     <span className="text-sm font-medium">
-                      Hi! {user.email?.split("@")[0]}
+                      Hi!{" "}
+                      {profile?.full_name ||
+                        user?.email?.split("@")[0] ||
+                        "User"}
                     </span>
                     <ChevronDown className="h-4 w-4" />
                   </Button>

@@ -85,6 +85,17 @@
 - created_at (TIMESTAMPTZ)
 - UNIQUE constraint on (user_id, skill_id)
 
+## Database RLS Patterns
+
+- **General Principle:** Start restrictive, open up as needed.
+- **Own Data:** Users can generally view, create, update, delete their _own_ entries in tables directly linked via `user_id` or `id` (e.g., `profiles`, `job_seeker_profiles`, `employer_profiles` for the owner, `user_skills`, `experiences`).
+- **Public Read Access:** For data needed across different user types (e.g., viewing job details, viewing basic employer info on job cards), RLS policies allowing reads for any `authenticated` user are necessary.
+  - **`employer_profiles`:** Authenticated users can read any employer profile (needed for job listings).
+  - **`profiles`:** Authenticated users can read any base profile (needed for fetching nested employer profile data in job listings).
+  - **`jobs`:** (Implicitly) Authenticated users can read job details (ensure RLS is set correctly if added).
+- **Specific Role Access:** (Not extensively used yet) Could be used if, e.g., only employers could read certain aggregated data.
+- **Implementation:** RLS policies are defined in SQL migrations (`src/db/migrations`).
+
 ## Database Schema (Planned)
 
 ### Jobs Table
@@ -121,6 +132,15 @@
 - importance_level (INTEGER, 1-5)
 - created_at
 - UNIQUE constraint on (job_id, skill_id)
+
+## Integrations & External Services (Planned)
+
+- **OpenAI API (for AI Summarization):**
+  - **Purpose:** Generate concise summaries of applicant profiles.
+  - **Implementation:** Called via a Supabase Edge Function (`summarize-applicant`).
+  - **Authentication:** Requires an API key stored securely as a Supabase environment variable.
+  - **Trigger:** Button click in `ViewApplicantsPage.tsx`.
+  - **Data Handling:** Function fetches applicant data, sends to OpenAI, optionally stores result in `applications.ai_summary`.
 
 ## Implemented Features
 

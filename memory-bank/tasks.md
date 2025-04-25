@@ -51,11 +51,12 @@
   - [x] Create Employer dashboard page
   - [x] Implement dashboard routing container
   - [x] Add dashboard route to App router
-  - [x] Populate dashboards with real data/widgets (Employer jobs, Job seeker recommendations)
+  - [x] Populate dashboards with real data/widgets (Employer jobs, Job seeker recommendations **w/ company & skills**)
 - [ ] Implement navigation (Header exists, needs refinement)
 - [x] Create job listing components (Used in EmployerDashboard, JobSearchPage)
 - [x] Develop profile creation forms
 - [x] Design job search interface (JobSearchPage created)
+- [x] Display user full_name in header
 
 ## Core Features
 
@@ -74,7 +75,34 @@
   - [x] Display applications to employers
   - [x] Allow employers to view applicant profiles
   - [x] Set up Row Level Security for profile viewing
+  - [x] Refine RLS for profile/employer_profile read access
+  - [x] Sort applicants by match score then date
 - [ ] Add notification system
+
+## AI Profile Summarization (New Feature)
+
+- [x] **Database:** Add `ai_summary` column to `applications` table.
+  - [x] Create migration file.
+  - [x] Update RLS policy for `applications` table (update/read `ai_summary`).
+- [x] **Backend:** Create Supabase Edge Function (`summarize-applicant`).
+  - [x] Implement security check (verify user is the job's employer).
+  - [x] Implement data fetching for applicant details (profile, skills, experience).
+  - [x] Implement prompt engineering for AI summarization.
+  - [x] Integrate OpenAI API call (using secure environment variable).
+  - [x] Implement logic to store summary in database (if Step 1 is done).
+  - [x] Define function response (summary or status).
+- [x] **Frontend Utility:** Create helper function to call Edge Function.
+  - [x] Add `generateAISummary` to `supabase.ts`.
+- [ ] **Frontend Integration:** Integrate the feature into `ViewApplicantsPage.tsx` (awaiting implementation).
+  - [ ] Add state management for summaries (per applicant: loading, error, data).
+  - [ ] Add UI element to display summary/loading/error.
+  - [ ] Add "Summarize" button to applicant actions.
+  - [ ] Implement button `onClick` handler to call Edge Function.
+  - [ ] Handle function response and update UI state.
+  - [ ] Implement logic to display existing stored summaries.
+- [x] **Configuration:** Set up OpenAI API key in local environment.
+  - [ ] Set up OpenAI API key in Supabase environment variables (when deploying Edge Function).
+- [ ] **Testing:** Test the end-to-end flow, error handling, and UI updates.
 
 ## Testing
 

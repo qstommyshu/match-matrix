@@ -26,8 +26,12 @@
 - Migration documentation updated
 - Added missing columns for job seeker profiles
 - Updated Row Level Security policies for profile viewing
-  - Modified `profiles_policy` to allow employers to view applicant profiles
-  - Modified `job_seeker_profiles_policy` to allow employers to view applicant details
+  - Modified `profiles_policy` to allow employers to view applicant profiles (Initial implementation)
+  - Modified `job_seeker_profiles_policy` to allow employers to view applicant details (Initial implementation)
+  - Added RLS policy to allow authenticated reads on `employer_profiles` (Fix for job seekers viewing company info)
+  - Added RLS policy to allow authenticated reads on `profiles` (Fix for fetching nested employer data via `jobs` table)
+- Updated `getJobApplications` to sort by `match_score` (desc, nulls last) then `created_at` (desc)
+- Updated `getJobs` to fetch `employer_profile` nested within `employer` relation
 
 ### Forms and Profiles
 
@@ -48,9 +52,11 @@
 - Basic dashboard layouts created (Job Seeker & Employer)
 - Dashboard routing implemented
 - Employer Dashboard populated with job listings
-- Job Seeker Dashboard populated with job recommendations (basic)
+- Job Seeker Dashboard populated with job recommendations (basic fetch, displays company name & required skills)
 - Job listing components created and used
 - Basic Job Search page created
+- Updated Header to display user's full name instead of email
+- Refined type definitions in `JobSeekerDashboardPage` to handle nested employer profile data
 
 ### Job Management (Core Features)
 
@@ -84,7 +90,14 @@
 - Designing/Implementing matching algorithm
 - Building recommendation engine (beyond basic fetch)
 
-## Up Next
+## Planned Features / Up Next
+
+- **AI Applicant Summarization:**
+  - Add button to `ViewApplicantsPage` to trigger AI summary generation.
+  - Create Supabase Edge Function to call OpenAI API.
+  - Fetch applicant profile, skills, experience for prompt.
+  - Display generated summary on applicant row.
+  - (Optional) Store summary in `applications` table.
 
 ### User Experience
 
@@ -110,4 +123,21 @@
 - Basic dashboards provide views of relevant data
 - Application system is implemented and functional
 - Employers can view applicant profiles with proper security controls
+- Job seekers can see employer company names on job cards
+- Applicants view for employers is now sorted by match score
 - Need to refine search/filtering, implement notification system, and build matching logic
+
+## 2023-08-04
+
+- Implemented backend for the AI Profile Summarization feature:
+  - Added `ai_summary` column to applications table via migration
+  - Fixed SQL syntax in the migration file (proper escaping of single quotes)
+  - Created Edge Function code for `summarize-applicant` that:
+    - Authenticates users
+    - Verifies the user is the job's employer
+    - Fetches application and applicant details
+    - Generates summary using OpenAI API
+    - Updates the database with the AI summary
+  - Added `generateAISummary` frontend utility function
+  - Set up OpenAI API key in local environment
+  - Next steps: Implement the feature in the ViewApplicantsPage UI

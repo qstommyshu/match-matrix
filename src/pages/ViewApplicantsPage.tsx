@@ -28,7 +28,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, Users, ArrowLeft, ExternalLink } from "lucide-react";
+import {
+  Loader2,
+  Users,
+  ArrowLeft,
+  ExternalLink,
+  Sparkles,
+} from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import {
   Tooltip,
@@ -37,6 +43,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { generateAISummary } from "@/lib/supabase";
 
 // Define the type for applications fetched by the updated getJobApplications
 type ApplicationWithSkills = Application & {
@@ -44,6 +51,16 @@ type ApplicationWithSkills = Application & {
   user?: Profile & {
     job_seeker_profile?: JobSeekerProfile | null;
     user_skills?: { skill: { name: string } }[]; // Applicant's skills
+  };
+  ai_summary?: string | null; // Add the ai_summary field to the type
+};
+
+// Type for summary state per application
+type SummaryState = {
+  [applicationId: string]: {
+    loading: boolean;
+    error: string | null;
+    summary: string | null;
   };
 };
 
@@ -55,6 +72,7 @@ const ViewApplicantsPage: React.FC = () => {
   const [applications, setApplications] = useState<ApplicationWithSkills[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [summaryStates, setSummaryStates] = useState<SummaryState>({});
 
   useEffect(() => {
     let isMounted = true;
@@ -107,8 +125,22 @@ const ViewApplicantsPage: React.FC = () => {
         if (!isMounted) return;
         if (appsError) throw appsError;
 
-        if (isMounted)
-          setApplications((fetchedApps as ApplicationWithSkills[]) || []);
+        const apps = (fetchedApps as ApplicationWithSkills[]) || [];
+
+        if (isMounted) {
+          setApplications(apps);
+
+          // Initialize summary states for applications that have AI summaries
+          const initialSummaryStates: SummaryState = {};
+          apps.forEach((app) => {
+            initialSummaryStates[app.id] = {
+              loading: false,
+              error: null,
+              summary: app.ai_summary || null,
+            };
+          });
+          setSummaryStates(initialSummaryStates);
+        }
       } catch (err) {
         if (!isMounted) return;
         console.error("Error fetching applicants:", err);
@@ -163,6 +195,70 @@ const ViewApplicantsPage: React.FC = () => {
     };
   };
 
+  // Function to handle generating AI summary for an application
+  const handleGenerateSummary = async (applicationId: string) => {
+    // Update state to show loading
+    setSummaryStates((prev) => ({
+      ...prev,
+      [applicationId]: {
+        loading: true,
+        error: null,
+        summary: prev[applicationId]?.summary || null,
+      },
+    }));
+
+    try {
+      const { summary, error } = await generateAISummary(applicationId);
+
+      if (error) {
+        throw error;
+      }
+
+      if (summary) {
+        // Update the application in the state with the new summary
+        setApplications((prev) =>
+          prev.map((app) =>
+            app.id === applicationId ? { ...app, ai_summary: summary } : app
+          )
+        );
+
+        // Update summary state
+        setSummaryStates((prev) => ({
+          ...prev,
+          [applicationId]: {
+            loading: false,
+            error: null,
+            summary,
+          },
+        }));
+
+        toast({
+          title: "Summary Generated",
+          description: "AI summary has been created successfully.",
+        });
+      }
+    } catch (err) {
+      console.error("Error generating summary:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to generate summary.";
+
+      setSummaryStates((prev) => ({
+        ...prev,
+        [applicationId]: {
+          loading: false,
+          error: errorMessage,
+          summary: prev[applicationId]?.summary || null,
+        },
+      }));
+
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <TooltipProvider>
       <div className="container mx-auto py-8 px-4">
@@ -213,6 +309,11 @@ const ViewApplicantsPage: React.FC = () => {
                       const applicantSkillNames =
                         app.user?.user_skills?.map((us) => us.skill.name) || [];
                       const requiredSkills = job.required_skills || [];
+                      const summaryState = summaryStates[app.id] || {
+                        loading: false,
+                        error: null,
+                        summary: app.ai_summary || null,
+                      };
 
                       return (
                         <TableRow key={app.id}>
@@ -231,6 +332,27 @@ const ViewApplicantsPage: React.FC = () => {
                                     .years_of_experience
                                 }{" "}
                                 years experience
+                              </div>
+                            )}
+                            {/* AI Summary section */}
+                            {summaryState.summary && (
+                              <div className="mt-2 p-2 bg-primary/5 rounded-md text-xs border border-primary/10">
+                                <div className="flex items-center gap-1 text-primary font-medium mb-1">
+                                  <Sparkles className="h-3 w-3" />
+                                  AI Summary:
+                                </div>
+                                {summaryState.summary}
+                              </div>
+                            )}
+                            {summaryState.loading && (
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                                Generating summary...
+                              </div>
+                            )}
+                            {summaryState.error && (
+                              <div className="text-xs text-red-500 mt-1">
+                                Error: {summaryState.error}
                               </div>
                             )}
                           </TableCell>
@@ -291,7 +413,7 @@ const ViewApplicantsPage: React.FC = () => {
                           <TableCell>
                             <Badge variant="secondary">{app.status}</Badge>
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right space-y-2">
                             {app.user_id && (
                               <Button
                                 variant="outline"
@@ -299,10 +421,27 @@ const ViewApplicantsPage: React.FC = () => {
                                 onClick={() =>
                                   navigate(`/user-profile/${app.user_id}`)
                                 }
+                                className="w-full"
                               >
                                 <ExternalLink className="mr-1 h-3 w-3" /> View
                               </Button>
                             )}
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="w-full"
+                              disabled={summaryState.loading}
+                              onClick={() => handleGenerateSummary(app.id)}
+                            >
+                              {summaryState.loading ? (
+                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                              ) : (
+                                <Sparkles className="mr-1 h-3 w-3" />
+                              )}
+                              {summaryState.summary
+                                ? "Regenerate"
+                                : "Summarize"}
+                            </Button>
                           </TableCell>
                         </TableRow>
                       );

@@ -14,13 +14,36 @@ import { Briefcase, FileText, Search, MapPin, Loader2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import {
   getJobs,
-  Job,
   Profile,
+  EmployerProfile,
   getUserApplications,
   Application,
 } from "@/lib/database";
 import { toast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
+
+// Define the expected Job structure for this component
+type JobWithNestedEmployerProfile = {
+  id: string;
+  employer_id: string;
+  title: string;
+  description: string;
+  location: string | null;
+  remote: boolean;
+  job_type: string | null;
+  salary_min: number | null;
+  salary_max: number | null;
+  experience_level: string | null;
+  status: string;
+  required_skills: string[] | null;
+  created_at: string;
+  updated_at: string;
+  employer?: Profile & {
+    // Nest employer_profile within employer
+    employer_profile?: EmployerProfile | null;
+  };
+  // skills?: JobSkill[]; // Add if needed, requires importing JobSkill
+};
 
 // Placeholder type for Recent Applications section
 interface ApplicationStub {
@@ -34,7 +57,9 @@ export const JobSeekerDashboardPage: React.FC = () => {
   const { profile, jobSeekerProfile, isJobSeeker } = useProfile();
   const navigate = useNavigate();
 
-  const [recommendedJobs, setRecommendedJobs] = useState<Job[]>([]);
+  const [recommendedJobs, setRecommendedJobs] = useState<
+    JobWithNestedEmployerProfile[]
+  >([]);
   const [isLoadingJobs, setIsLoadingJobs] = useState(true);
   const [jobsError, setJobsError] = useState<string | null>(null);
 
@@ -56,10 +81,12 @@ export const JobSeekerDashboardPage: React.FC = () => {
         if (!isMounted) return;
         if (fetchError) throw fetchError;
 
-        const openJobs = (fetchedJobs || []).filter(
-          (job) => job.status === "open"
-        );
-        setRecommendedJobs(openJobs.slice(0, 5));
+        const openJobs = (fetchedJobs || [])
+          .filter((job) => job.status === "open")
+          .slice(0, 5);
+
+        // Cast fetchedJobs to the explicit type when setting state
+        setRecommendedJobs(openJobs as JobWithNestedEmployerProfile[]);
       } catch (err) {
         if (!isMounted) return;
         console.error("Error fetching recommended jobs:", err);
@@ -200,12 +227,9 @@ export const JobSeekerDashboardPage: React.FC = () => {
               </div>
             ) : recommendedJobs.length > 0 ? (
               recommendedJobs.map((job) => {
-                const employerProfile = job.employer as
-                  | Profile
-                  | null
-                  | undefined;
-                const employerDisplayName =
-                  employerProfile?.full_name || "Unknown Employer";
+                const companyName =
+                  job.employer?.employer_profile?.company_name ||
+                  "Company Name Unavailable";
                 const postedDate = new Date(
                   job.created_at
                 ).toLocaleDateString();
@@ -221,7 +245,7 @@ export const JobSeekerDashboardPage: React.FC = () => {
                           {job.title}
                         </h3>
                         <p className="text-sm text-muted-foreground">
-                          {employerDisplayName}
+                          {companyName}
                         </p>
                       </div>
                       <span className="text-xs text-muted-foreground whitespace-nowrap">
@@ -240,9 +264,18 @@ export const JobSeekerDashboardPage: React.FC = () => {
                         </span>
                       </div>
                     )}
-                    <p className="text-sm mb-4 line-clamp-2">
+                    <p className="text-sm mb-3 line-clamp-2">
                       {job.description}
                     </p>
+                    {job.required_skills && job.required_skills.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-4">
+                        {job.required_skills.map((skill, index) => (
+                          <Badge key={index} variant="secondary">
+                            {skill}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"

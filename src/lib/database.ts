@@ -73,6 +73,7 @@ export interface Job {
   created_at: string;
   updated_at: string;
   employer?: Profile;
+  employer_profile?: EmployerProfile;
   skills?: JobSkill[];
 }
 
@@ -303,7 +304,10 @@ export const getJobs = async (filters?: {
 }) => {
   let query = supabase.from("jobs").select(`
     *,
-    employer:profiles(*),
+    employer:profiles(
+      *,
+      employer_profile:employer_profiles(*)
+    ),
     skills:job_skills(*, skill:skills(*))
   `);
 
@@ -325,7 +329,13 @@ export const getJobs = async (filters?: {
 
   const { data, error } = await query.order("created_at", { ascending: false });
 
-  let filteredJobs = data as Job[] | null;
+  type JobWithNestedEmployerProfile = Omit<Job, "employer"> & {
+    employer?: Profile & {
+      employer_profile?: EmployerProfile | null;
+    };
+  };
+
+  let filteredJobs = data as JobWithNestedEmployerProfile[] | null;
 
   if (filteredJobs && filters?.skills && filters.skills.length > 0) {
     filteredJobs = filteredJobs.filter((job) => {
@@ -336,7 +346,7 @@ export const getJobs = async (filters?: {
     });
   }
 
-  return { jobs: filteredJobs, error };
+  return { jobs: filteredJobs as Job[] | null, error };
 };
 
 export const getJob = async (jobId: string) => {
@@ -429,6 +439,7 @@ export const getJobApplications = async (jobId: string) => {
     `
     )
     .eq("job_id", jobId)
+    .order("match_score", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false });
 
   // Update the Application type to reflect the nested user_skills
@@ -824,5 +835,5 @@ export const getEmployerJobsWithApplicantCount = async (
     applications: undefined, // Remove the nested count array
   })) as JobWithApplicantCount[] | null;
 
-  return { jobs: jobsWithCount, error: null };
+  return { jobs: jobsWithCount, error };
 };

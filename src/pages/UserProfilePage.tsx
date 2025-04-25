@@ -22,7 +22,6 @@ import {
   Wrench,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Extended Profile type that includes joined tables
 interface ProfileWithDetails extends Profile {
@@ -246,116 +245,93 @@ const UserProfilePage: React.FC = () => {
                 )}
               </div>
 
-              {/* Experience and Education in Tabs */}
+              {/* Display Work Experience and Education Sections directly */}
               {(workExperiences.length > 0 ||
-                educationExperiences.length > 0) && (
-                <div className="mt-8">
-                  <Tabs defaultValue="experience" className="w-full">
-                    <TabsList className="grid grid-cols-2 mb-4">
-                      <TabsTrigger value="experience">
-                        Work Experience
-                      </TabsTrigger>
-                      <TabsTrigger value="education">Education</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="experience">
-                      {loadingExperiences ? (
-                        <div className="flex justify-center py-8">
-                          <Loader2 className="h-6 w-6 animate-spin" />
-                        </div>
-                      ) : workExperiences.length > 0 ? (
-                        <div className="space-y-6">
+                educationExperiences.length > 0) &&
+                !loadingExperiences && (
+                  <div className="space-y-6 mt-6">
+                    {/* Work Experience Section */}
+                    {workExperiences.length > 0 && (
+                      <div>
+                        <h3 className="font-medium text-lg mb-3 flex items-center gap-2">
+                          <Building className="h-5 w-5 text-primary" /> Work
+                          Experience
+                        </h3>
+                        <div className="space-y-4">
                           {workExperiences.map((exp) => (
                             <div
                               key={exp.id}
-                              className="border-l-4 border-primary pl-4 py-2"
+                              className="pl-4 border-l-2 border-primary/50"
                             >
-                              <h4 className="font-semibold text-lg">
-                                {exp.title}
-                              </h4>
-                              <div className="flex items-center space-x-2 text-muted-foreground">
-                                <Building className="h-4 w-4" />
-                                <span>{exp.organization}</span>
-                              </div>
+                              <h4 className="font-semibold">{exp.title}</h4>
+                              <p className="text-sm text-muted-foreground">
+                                {exp.organization}
+                              </p>
                               {exp.location && (
-                                <div className="flex items-center space-x-2 text-muted-foreground">
-                                  <MapPin className="h-4 w-4" />
-                                  <span>{exp.location}</span>
-                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  {exp.location}
+                                </p>
                               )}
-                              <div className="flex items-center space-x-2 text-muted-foreground">
-                                <Calendar className="h-4 w-4" />
-                                <span>
-                                  {formatDate(exp.start_date)} -{" "}
-                                  {exp.is_current
-                                    ? "Present"
-                                    : formatDate(exp.end_date)}
-                                </span>
-                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {formatDate(exp.start_date)} -
+                                {exp.is_current
+                                  ? " Present"
+                                  : ` ${formatDate(exp.end_date)}`}
+                              </p>
                               {exp.description && (
-                                <p className="mt-2 text-sm text-gray-600">
+                                <p className="mt-1 text-sm whitespace-pre-wrap text-gray-700">
                                   {exp.description}
                                 </p>
                               )}
                             </div>
                           ))}
                         </div>
-                      ) : (
-                        <p className="text-gray-400 text-center py-4">
-                          No work experience listed
-                        </p>
-                      )}
-                    </TabsContent>
+                      </div>
+                    )}
 
-                    <TabsContent value="education">
-                      {loadingExperiences ? (
-                        <div className="flex justify-center py-8">
-                          <Loader2 className="h-6 w-6 animate-spin" />
-                        </div>
-                      ) : educationExperiences.length > 0 ? (
-                        <div className="space-y-6">
-                          {educationExperiences.map((edu) => (
+                    {/* Education Section */}
+                    {educationExperiences.length > 0 && (
+                      <div>
+                        <h3 className="font-medium text-lg mb-3 flex items-center gap-2">
+                          <GraduationCap className="h-5 w-5 text-primary" />{" "}
+                          Education
+                        </h3>
+                        <div className="space-y-4">
+                          {educationExperiences.map((exp) => (
                             <div
-                              key={edu.id}
-                              className="border-l-4 border-primary pl-4 py-2"
+                              key={exp.id}
+                              className="pl-4 border-l-2 border-primary/50"
                             >
-                              <h4 className="font-semibold text-lg">
-                                {edu.title}
-                              </h4>
-                              <div className="flex items-center space-x-2 text-muted-foreground">
-                                <GraduationCap className="h-4 w-4" />
-                                <span>{edu.organization}</span>
-                              </div>
-                              {edu.location && (
-                                <div className="flex items-center space-x-2 text-muted-foreground">
-                                  <MapPin className="h-4 w-4" />
-                                  <span>{edu.location}</span>
-                                </div>
+                              <h4 className="font-semibold">{exp.title}</h4>
+                              <p className="text-sm text-muted-foreground">
+                                {exp.organization}
+                              </p>
+                              {exp.location && (
+                                <p className="text-xs text-muted-foreground">
+                                  {exp.location}
+                                </p>
                               )}
-                              <div className="flex items-center space-x-2 text-muted-foreground">
-                                <Calendar className="h-4 w-4" />
-                                <span>
-                                  {formatDate(edu.start_date)} -{" "}
-                                  {edu.is_current
-                                    ? "Present"
-                                    : formatDate(edu.end_date)}
-                                </span>
-                              </div>
-                              {edu.description && (
-                                <p className="mt-2 text-sm text-gray-600">
-                                  {edu.description}
+                              <p className="text-xs text-muted-foreground">
+                                {formatDate(exp.start_date)} -
+                                {exp.is_current
+                                  ? " Present"
+                                  : ` ${formatDate(exp.end_date)}`}
+                              </p>
+                              {exp.description && (
+                                <p className="mt-1 text-sm whitespace-pre-wrap text-gray-700">
+                                  {exp.description}
                                 </p>
                               )}
                             </div>
                           ))}
                         </div>
-                      ) : (
-                        <p className="text-gray-400 text-center py-4">
-                          No education details listed
-                        </p>
-                      )}
-                    </TabsContent>
-                  </Tabs>
+                      </div>
+                    )}
+                  </div>
+                )}
+              {loadingExperiences && (
+                <div className="flex justify-center items-center h-20">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
               )}
             </>
@@ -363,39 +339,13 @@ const UserProfilePage: React.FC = () => {
 
           {isEmployer && profile?.employer_profile && (
             <>
-              {profile.employer_profile.company_name && (
-                <div>
-                  <h3 className="font-medium text-lg mb-2">Company</h3>
-                  <p className="text-gray-600">
-                    {profile.employer_profile.company_name}
-                  </p>
-                </div>
-              )}
-
-              {profile.employer_profile.company_description && (
-                <div>
-                  <h3 className="font-medium text-lg mb-2">
-                    Company Description
-                  </h3>
-                  <p className="text-gray-600">
-                    {profile.employer_profile.company_description}
-                  </p>
-                </div>
-              )}
-
-              {profile.employer_profile.website && (
-                <div>
-                  <h3 className="font-medium text-lg mb-2">Website</h3>
-                  <a
-                    href={profile.employer_profile.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline"
-                  >
-                    {profile.employer_profile.website}
-                  </a>
-                </div>
-              )}
+              <div>
+                <h3 className="font-medium text-lg mb-2">Company Name</h3>
+                <p className="text-gray-600">
+                  {profile.employer_profile.company_name}
+                </p>
+              </div>
+              {/* Add other employer details here if needed */}
             </>
           )}
         </CardContent>
