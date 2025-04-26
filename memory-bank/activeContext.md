@@ -2,37 +2,37 @@
 
 ## Current Development Focus
 
-- Refinement of Job Seeker and Employer dashboards.
-- Implementation of core job management functionalities (posting, viewing, editing, searching).
-- Connecting dashboard components to real data.
+- Planning and implementation of Pro Job Seeker features
+- Design of database schema updates for pro-related functionality
+- Architecture for automation of power matches and daily check-ins
+- UI/UX considerations for pro upgrade flow
 
 ## Technical Challenges
 
-- Ensuring efficient data fetching and state management for job listings and details.
-- Handling routing and authorization for job-related pages.
-- Reusing form components effectively for both creation and editing.
-- Implementing basic job recommendations/display on dashboards.
-- Addressing type mismatches and linter errors during implementation.
+- Implementing a daily check-in system for pro users' active status
+- Creating the assessment_skills verification process
+- Designing efficient match algorithms for power_match auto-application
+- Building the auto-withdrawal mechanism for unviewed applications
+- Ensuring security and proper RLS for pro user data
+- Implementing scheduler for daily automation tasks
 
 ## Next Tasks
 
-1.  Implement filtering and sorting on the `JobSearchPage`.
-2.  Begin implementation of the application system (Apply button functionality, storing applications).
-3.  Refine job recommendations logic beyond simple fetching.
-4.  Enhance employer job management (e.g., changing status, viewing applicants).
-5.  Address remaining UI polish and navigation improvements.
+1. Implement backend functions for pro account management
+2. Develop power match generation and auto-application logic
+3. Design and implement pro upgrade UI
+4. Create daily check-in functionality
+5. Implement assessment skills verification UI
+6. Write unit tests for pro feature database functions (from Testing section)
 
 ## Current Status
 
-- Authentication and profile management are stable.
-- Database migrations are up-to-date.
-- **Job Management:**
-  - Employers can post new jobs (`PostJobPage`).
-  - Employers can view their posted jobs on their dashboard (`EmployerDashboardPage`).
-  - Employers can view details of a specific job (`JobDetailPage`).
-  - Employers can edit their existing jobs (`EditJobPage`).
-  - Job seekers can view job details (`JobDetailPage`).
-  - A basic job search page exists (`JobSearchPage`), listing all jobs.
-  - Job seeker dashboard shows recent jobs (`JobSeekerDashboardPage`).
-- Routing for job-related pages is implemented in `App.tsx`.
-- **Next Steps:** Focus on job search refinement, application system, and improved recommendations.
+- Pro Job Seeker features have been planned and documented in tasks.md
+- Database migration `17_add_pro_features.sql` created, implementing schema changes:
+  - New columns in `job_seeker_profiles`: `is_pro`, `pro_active_status`, `last_active_check_in`
+  - New tables: `assessment_skills`, `power_matches`
+  - RLS policies added for new schema elements
+- Backend function requirements have been outlined
+- Frontend components for pro features have been identified
+- Automation tasks have been defined
+- Ready to implement backend functions for pro features.

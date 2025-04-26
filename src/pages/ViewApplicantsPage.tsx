@@ -62,7 +62,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
+import { cn, getStageBadgeColor } from "@/lib/utils";
 import { generateAISummary } from "@/lib/supabase";
 
 // Define the type for applications fetched by the updated getJobApplications
@@ -108,26 +108,6 @@ const getNextStage = (
   currentStage: Application["stage"]
 ): Application["stage"] | null => {
   return nextStageMap[currentStage] || null;
-};
-
-// Helper function to get stage badge color
-const getStageBadgeColor = (stage: Application["stage"]) => {
-  switch (stage) {
-    case "Applied":
-      return "bg-blue-100 text-blue-800";
-    case "Screening":
-      return "bg-purple-100 text-purple-800";
-    case "Interview":
-      return "bg-amber-100 text-amber-800";
-    case "Offer":
-      return "bg-green-100 text-green-800";
-    case "Rejected":
-      return "bg-red-100 text-red-800";
-    case "Withdrawn":
-      return "bg-gray-100 text-gray-800";
-    default:
-      return "bg-gray-100 text-gray-800";
-  }
 };
 
 const ViewApplicantsPage: React.FC = () => {

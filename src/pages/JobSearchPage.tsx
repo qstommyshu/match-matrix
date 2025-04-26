@@ -1,70 +1,122 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { getJobs, Job, Profile } from "@/lib/database";
+import { getJobs, Job, Profile, EmployerProfile } from "@/lib/database";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
+  CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, MapPin, Briefcase, DollarSign } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { MapPin, Loader2, Search, ArrowLeft, ArrowRight } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { Pagination } from "@/components/ui/pagination"; // Assuming pagination component exists
 
-const JobSearchPage: React.FC = () => {
+// Type for Job with nested employer profile
+type JobWithNestedEmployer = Job & {
+  employer?: Profile & {
+    employer_profile?: EmployerProfile | null;
+  };
+};
+
+// Default page size
+const PAGE_SIZE = 10;
+
+export const JobSearchPage: React.FC = () => {
   const navigate = useNavigate();
-  const [jobs, setJobs] = useState<Job[]>([]);
+  const [jobs, setJobs] = useState<JobWithNestedEmployer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [locationTerm, setLocationTerm] = useState("");
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalJobs, setTotalJobs] = useState(0);
+
+  const fetchJobs = async (page = 1) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const {
+        jobs: fetchedJobs,
+        error: fetchError,
+        count,
+      } = await getJobs({
+        search: searchTerm,
+        location: locationTerm,
+        page,
+        pageSize: PAGE_SIZE,
+      });
+      if (fetchError) throw fetchError;
+      setJobs((fetchedJobs as JobWithNestedEmployer[]) || []);
+      setTotalJobs(count || 0);
+      setCurrentPage(page);
+    } catch (err) {
+      console.error("Error fetching jobs:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to load jobs.";
+      setError(errorMessage);
+      toast({
+        title: "Error Loading Jobs",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let isMounted = true;
-    const fetchAllJobs = async () => {
-      if (isMounted) setIsLoading(true);
-      setError(null);
-      try {
-        const { jobs: fetchedJobs, error: fetchError } = await getJobs({});
-        if (!isMounted) return;
-        if (fetchError) throw fetchError;
+    fetchJobs(1); // Fetch first page on initial load or when search terms change
+  }, [searchTerm, locationTerm]); // Re-fetch when search terms change
 
-        // Filter for open jobs client-side
-        const openJobs = (fetchedJobs || []).filter(
-          (job) => job.status === "open"
-        );
+  const handleSearch = () => {
+    fetchJobs(1); // Reset to first page on new search
+  };
 
-        if (isMounted) setJobs(openJobs);
-      } catch (err) {
-        if (!isMounted) return;
-        console.error("Error fetching all jobs:", err);
-        const errorMessage =
-          err instanceof Error ? err.message : "Failed to load jobs.";
-        if (isMounted) {
-          setError(errorMessage);
-          toast({
-            title: "Error",
-            description: "Could not load job listings.",
-            variant: "destructive",
-          });
-        }
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    };
+  const handlePageChange = (newPage: number) => {
+    fetchJobs(newPage);
+  };
 
-    fetchAllJobs();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const totalPages = Math.ceil(totalJobs / PAGE_SIZE);
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-6">Browse All Jobs</h1>
-
-      {/* TODO: Add Filtering/Search Bar here later */}
+      <Card className="mb-8 glass-card">
+        <CardHeader>
+          <CardTitle className="text-2xl flex items-center gap-2">
+            <Search className="h-6 w-6" /> Job Search
+          </CardTitle>
+          <CardDescription>Find your next opportunity.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Input
+            placeholder="Search by keyword (title, description)..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+          />
+          <Input
+            placeholder="Search by location..."
+            value={locationTerm}
+            onChange={(e) => setLocationTerm(e.target.value)}
+            onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+          />
+          <Button onClick={handleSearch} className="w-full sm:w-auto">
+            {isLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Search className="mr-2 h-4 w-4" />
+            )}
+            Search
+          </Button>
+        </CardContent>
+      </Card>
 
       {isLoading ? (
         <div className="flex justify-center items-center py-16">
@@ -73,96 +125,84 @@ const JobSearchPage: React.FC = () => {
       ) : error ? (
         <p className="text-red-600 text-center">Error: {error}</p>
       ) : jobs.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {jobs.map((job) => {
-            // Assuming job.employer is of type Profile | null | undefined
-            const employerProfile = job.employer as Profile | null | undefined;
-            // Use full_name as company_name is not available on Profile type
-            const displayName =
-              employerProfile?.full_name || "Unknown Employer";
-
-            return (
-              <Card
-                key={job.id}
-                className="glass-card hover:shadow-lg transition-shadow duration-200 flex flex-col"
-              >
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-xl font-semibold hover:text-primary transition-colors">
-                    {/* Make title clickable */}
-                    <span
-                      className="cursor-pointer"
-                      onClick={() => navigate(`/jobs/${job.id}`)}
-                    >
-                      {job.title}
+        <div className="space-y-6">
+          {jobs.map((job) => (
+            <Card
+              key={job.id}
+              className="hover:shadow-lg transition-shadow duration-200 cursor-pointer glass-card-inner"
+              onClick={() => navigate(`/jobs/${job.id}`)}
+            >
+              <CardHeader>
+                <CardTitle>{job.title}</CardTitle>
+                <CardDescription>
+                  {job.employer?.employer_profile?.company_name ||
+                    "Company Name Unavailable"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground line-clamp-3 mb-3">
+                  {job.description}
+                </p>
+                {(job.location || job.remote) && (
+                  <div className="flex items-center text-sm text-muted-foreground mb-3">
+                    <MapPin className="h-4 w-4 mr-1" />
+                    <span>
+                      {job.location
+                        ? `${job.location}${
+                            job.remote ? " (Remote Available)" : ""
+                          }`
+                        : "Fully Remote"}
                     </span>
-                  </CardTitle>
-                  <CardDescription className="text-sm">
-                    {/* Display employer's full name */}
-                    {displayName}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex-grow space-y-3">
-                  {(job.location || job.remote) && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <MapPin className="h-4 w-4 flex-shrink-0" />
-                      <span>
-                        {job.location
-                          ? `${job.location}${
-                              job.remote ? " (Remote Available)" : ""
-                            }`
-                          : "Fully Remote"}
-                      </span>
-                    </div>
-                  )}
-                  {(job.salary_min || job.salary_max) && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <DollarSign className="h-4 w-4 flex-shrink-0" />
-                      <span>
-                        {job.salary_min
-                          ? `$${job.salary_min.toLocaleString()}`
-                          : ""}
-                        {job.salary_min && job.salary_max ? " - " : ""}
-                        {job.salary_max
-                          ? `$${job.salary_max.toLocaleString()}`
-                          : ""}
-                        {job.salary_min || job.salary_max
-                          ? " (Annual)"
-                          : "Salary not specified"}
-                      </span>
-                    </div>
-                  )}
-                  {job.job_type && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Briefcase className="h-4 w-4 flex-shrink-0" />
-                      <span>{job.job_type}</span>
-                    </div>
-                  )}
-                  {/* Trimmed description */}
-                  <p className="text-sm text-muted-foreground line-clamp-3 pt-2">
-                    {job.description}
-                  </p>
-                </CardContent>
-                <div className="p-4 pt-0 mt-auto">
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => navigate(`/jobs/${job.id}`)}
-                  >
-                    View Details
-                  </Button>
-                </div>
-              </Card>
-            );
-          })}
+                  </div>
+                )}
+                {job.required_skills && job.required_skills.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {job.required_skills.map((skill, index) => (
+                      <Badge key={index} variant="secondary">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+              <CardFooter className="text-xs text-muted-foreground">
+                Posted: {new Date(job.created_at).toLocaleDateString()}
+              </CardFooter>
+            </Card>
+          ))}
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center pt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage <= 1}
+                className="mr-2"
+              >
+                <ArrowLeft className="h-4 w-4 mr-1" /> Previous
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage >= totalPages}
+                className="ml-2"
+              >
+                Next <ArrowRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          )}
         </div>
       ) : (
-        <div className="text-center text-muted-foreground py-16">
-          <Briefcase className="mx-auto h-12 w-12 mb-4" />
-          <p>No open jobs found at the moment.</p>
-        </div>
+        <p className="text-center text-muted-foreground py-16">
+          No jobs found matching your criteria.
+        </p>
       )}
     </div>
   );
 };
-
-export default JobSearchPage;

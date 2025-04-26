@@ -6,6 +6,7 @@ import {
   getUserApplications,
   createApplication,
   Application,
+  updateApplicationStatus,
 } from "@/lib/database"; // Import application functions
 import { useProfile } from "@/lib/ProfileContext"; // To check if viewer is owner or applicant
 import { useAuth } from "@/lib/AuthContext"; // To check if logged in
@@ -27,6 +28,7 @@ import {
   UserCheck,
   Send,
   Users,
+  XCircle,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 
@@ -39,7 +41,9 @@ const JobDetailPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasApplied, setHasApplied] = useState(false);
+  const [applicationId, setApplicationId] = useState<string | null>(null);
   const [isApplying, setIsApplying] = useState(false);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [checkingApplication, setCheckingApplication] = useState(true); // Loading state for application check
 
   useEffect(() => {
@@ -57,6 +61,7 @@ const JobDetailPage: React.FC = () => {
       setCheckingApplication(true);
       setError(null);
       setHasApplied(false); // Reset application status on job change
+      setApplicationId(null); // Reset application ID
 
       try {
         // Fetch Job Details
@@ -76,10 +81,13 @@ const JobDetailPage: React.FC = () => {
             // Log error but don't block job view
             console.error("Error checking application status:", appError);
           } else {
-            const alreadyApplied = applications?.some(
+            const existingApplication = applications?.find(
               (app) => app.job_id === jobId
             );
-            setHasApplied(!!alreadyApplied);
+            if (existingApplication) {
+              setHasApplied(true);
+              setApplicationId(existingApplication.id);
+            }
           }
         } else {
           setHasApplied(false); // Cannot apply if not logged in seeker
@@ -125,8 +133,9 @@ const JobDetailPage: React.FC = () => {
       const { application, error } = await createApplication({
         job_id: jobId,
         user_id: user.id,
-        status: "applied", // Explicitly set status
-        cover_letter: null, // No cover letter for now
+        status: "applied",
+        stage: "Applied",
+        cover_letter: null,
       });
 
       if (error) throw error;
@@ -135,7 +144,10 @@ const JobDetailPage: React.FC = () => {
         title: "Application Submitted!",
         description: "Your application has been sent successfully.",
       });
-      setHasApplied(true); // Update UI to reflect application
+      setHasApplied(true);
+      if (application) {
+        setApplicationId(application.id);
+      }
     } catch (err) {
       console.error("Error submitting application:", err);
       toast({
@@ -146,6 +158,45 @@ const JobDetailPage: React.FC = () => {
       });
     } finally {
       setIsApplying(false);
+    }
+  };
+
+  const handleWithdraw = async () => {
+    if (!applicationId || !user || !profile || !isJobSeeker()) {
+      toast({
+        title: "Cannot Withdraw",
+        description: "No application found or you are not eligible.",
+      });
+      return;
+    }
+
+    setIsWithdrawing(true);
+    try {
+      const { error } = await updateApplicationStatus(
+        applicationId,
+        "withdrawn",
+        "Withdrawn"
+      );
+      if (error) throw error;
+
+      toast({
+        title: "Application Withdrawn",
+        description: "You have successfully withdrawn your application.",
+      });
+      setHasApplied(false);
+      setApplicationId(null);
+    } catch (err) {
+      console.error("Error withdrawing application:", err);
+      toast({
+        title: "Withdrawal Failed",
+        description:
+          err instanceof Error
+            ? err.message
+            : "Could not withdraw application.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsWithdrawing(false);
     }
   };
 
@@ -187,10 +238,20 @@ const JobDetailPage: React.FC = () => {
         </Button>
       );
     }
-    if (hasApplied) {
+    if (hasApplied && applicationId) {
       return (
-        <Button className="w-full" disabled variant="outline">
-          Already Applied
+        <Button
+          className="w-full"
+          variant="destructive"
+          onClick={handleWithdraw}
+          disabled={isWithdrawing}
+        >
+          {isWithdrawing ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <XCircle className="mr-2 h-4 w-4" />
+          )}
+          {isWithdrawing ? "Withdrawing..." : "Withdraw Application"}
         </Button>
       );
     }

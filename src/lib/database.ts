@@ -309,33 +309,58 @@ export const getJobs = async (filters?: {
   remote?: boolean;
   skills?: string[];
   employerId?: string;
+  page?: number;
+  pageSize?: number;
 }) => {
-  let query = supabase.from("jobs").select(`
-    *,
-    employer:profiles(
+  const page = filters?.page || 1;
+  const pageSize = filters?.pageSize || 10; // Default page size
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let query = supabase.from("jobs").select(
+    `
       *,
-      employer_profile:employer_profiles(*)
-    ),
-    skills:job_skills(*, skill:skills(*))
-  `);
+      employer:profiles(
+        *,
+        employer_profile:employer_profiles(*)
+      ),
+      skills:job_skills(*, skill:skills(*))
+    `,
+    { count: "exact" } // Request total count
+  );
 
+  // Apply filters
   if (filters?.search) {
-    query = query.textSearch("fts", filters.search);
+    query = query.textSearch("fts", filters.search, { type: "websearch" });
   }
-
   if (filters?.location) {
     query = query.ilike("location", `%${filters.location}%`);
   }
-
   if (filters?.remote !== undefined) {
     query = query.eq("remote", filters.remote);
   }
-
   if (filters?.employerId) {
     query = query.eq("employer_id", filters.employerId);
   }
+  if (filters?.skills && filters.skills.length > 0) {
+    // This filter needs to be applied *after* the main query because it depends on joined data
+    // We will filter in JS below for simplicity, but a DB function would be more efficient for large datasets
+  }
 
-  const { data, error } = await query.order("created_at", { ascending: false });
+  // Apply status filter (always fetch open jobs unless employerId is specified)
+  if (!filters?.employerId) {
+    query = query.eq("status", "open");
+  }
+
+  // Apply ordering and pagination
+  query = query.order("created_at", { ascending: false }).range(from, to);
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    console.error("Error fetching jobs:", error);
+    return { jobs: null, error, count: 0 };
+  }
 
   type JobWithNestedEmployerProfile = Omit<Job, "employer"> & {
     employer?: Profile & {
@@ -345,16 +370,24 @@ export const getJobs = async (filters?: {
 
   let filteredJobs = data as JobWithNestedEmployerProfile[] | null;
 
+  // Apply skills filter in JS (if needed)
   if (filteredJobs && filters?.skills && filters.skills.length > 0) {
     filteredJobs = filteredJobs.filter((job) => {
       if (!job.skills) return false;
-      return filters.skills.some((skillId) =>
-        job.skills!.some((jobSkill) => jobSkill.skill_id === skillId)
+      // Check if at least one of the filter skills matches a job skill
+      return filters.skills.some(
+        (filterSkillId) =>
+          job.skills!.some(
+            (jobSkill) =>
+              jobSkill.skill?.name.toLowerCase() ===
+                filterSkillId.toLowerCase() ||
+              jobSkill.skill_id === filterSkillId
+          ) // Match by name or ID for flexibility
       );
     });
   }
 
-  return { jobs: filteredJobs as Job[] | null, error };
+  return { jobs: filteredJobs as Job[] | null, error: null, count: count || 0 };
 };
 
 export const getJob = async (jobId: string) => {
@@ -606,13 +639,30 @@ export const createApplication = async (
   }
 };
 
+// Function to update application status (used for withdrawing)
 export const updateApplicationStatus = async (
   applicationId: string,
-  status: string
+  status: string, // Could also update stage here if needed
+  stage: Application["stage"]
 ) => {
   const { data, error } = await supabase
     .from("applications")
-    .update({ status })
+    .update({ status, stage, updated_at: new Date().toISOString() })
+    .eq("id", applicationId)
+    .select()
+    .single();
+
+  return { application: data as Application | null, error };
+};
+
+// Function to update application stage
+export const updateApplicationStage = async (
+  applicationId: string,
+  stage: Application["stage"]
+) => {
+  const { data, error } = await supabase
+    .from("applications")
+    .update({ stage })
     .eq("id", applicationId)
     .select()
     .single();
@@ -844,21 +894,6 @@ export const getEmployerJobsWithApplicantCount = async (
   })) as JobWithApplicantCount[] | null;
 
   return { jobs: jobsWithCount, error };
-};
-
-// Function to update application stage
-export const updateApplicationStage = async (
-  applicationId: string,
-  stage: Application["stage"]
-) => {
-  const { data, error } = await supabase
-    .from("applications")
-    .update({ stage })
-    .eq("id", applicationId)
-    .select()
-    .single();
-
-  return { application: data as Application | null, error };
 };
 
 // Function to batch update application stages

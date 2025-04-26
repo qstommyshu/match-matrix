@@ -178,6 +178,93 @@
   - [ ] Set up environment variables (Supabase URL/Key, OpenAI Key) as secrets in the CI/CD platform.
   - [ ] **Testing:** Trigger pipeline and verify successful build and deployment.
 
+## Pro Job Seeker Feature
+
+- [x] **Database: Update Schema for Pro Features**
+
+  - [x] Add `is_pro` boolean column to `job_seeker_profiles` table.
+  - [x] Add `pro_active_status` boolean column to `job_seeker_profiles` table.
+  - [x] Add `last_active_check_in` timestamp column to `job_seeker_profiles` table.
+  - [x] Create `assessment_skills` table with columns:
+    - [x] `id` (primary key)
+    - [x] `user_id` (foreign key to profiles)
+    - [x] `skill_id` (foreign key to skills)
+    - [x] `assessment_score` (numeric)
+    - [x] `verified_at` (timestamp)
+  - [x] Create `power_matches` table with columns:
+    - [x] `id` (primary key)
+    - [x] `user_id` (foreign key to profiles)
+    - [x] `job_id` (foreign key to jobs)
+    - [x] `application_id` (foreign key to applications, nullable)
+    - [x] `match_score` (numeric)
+    - [x] `created_at` (timestamp)
+    - [x] `viewed_at` (timestamp, nullable)
+    - [x] `applied_at` (timestamp, nullable)
+  - [x] Create migration file for all pro-related schema changes.
+  - [x] Update RLS policies for new tables (user can view/modify own data).
+
+- [ ] **Backend: Pro Features Core Functions**
+
+  - [ ] Create types for `AssessmentSkill` and `PowerMatch` in `database.ts`.
+  - [ ] Implement `upgradeToProAccount` function.
+  - [ ] Implement `checkInActiveStatus` function to update last active check-in.
+  - [ ] Implement `getAssessmentSkills` function.
+  - [ ] Implement `addAssessmentSkill` function.
+  - [ ] Implement `updateAssessmentSkill` function.
+  - [ ] Implement `getPowerMatches` function.
+  - [ ] Implement `markPowerMatchViewed` function.
+  - [ ] Implement Edge Function for daily power_match generation.
+
+- [ ] **Backend: Pro Features Automation Functions**
+
+  - [ ] Create SQL function for finding eligible power_match jobs (>80% match score, not applied).
+  - [ ] Create Edge Function `generate-power-matches` to:
+    - [ ] Select pro users with active status
+    - [ ] Find top 3 matching jobs for each user
+    - [ ] Create power_match entries
+  - [ ] Create Edge Function `auto-apply-power-matches` to:
+    - [ ] Create applications for power_matches without applications
+    - [ ] Update power_matches with applied_at timestamp
+  - [ ] Create Edge Function `check-power-match-views` to:
+    - [ ] Identify power_matches not viewed within 2 days
+    - [ ] Auto-withdraw applications for these power_matches
+  - [ ] Create SQL functions for scheduled tasks (daily check-ins, autowithdrawals)
+
+- [ ] **Frontend: Pro Upgrade UI**
+
+  - [ ] Create `ProFeatureBanner` component for job seeker dashboard.
+  - [ ] Create `UpgradeToProModal` component with toggle and explanations.
+  - [ ] Add pro badge/indicator to job seeker profile UI.
+  - [ ] Implement stripe or other payment integration for pro upgrade.
+
+- [ ] **Frontend: Active Check-in UI**
+
+  - [ ] Create `DailyCheckInModal` to appear for pro users who haven't checked in.
+  - [ ] Add check-in reminder notification to header for pro users.
+  - [ ] Implement auto check-in when pro user logs in.
+
+- [ ] **Frontend: Assessment Skills UI**
+
+  - [ ] Create `AssessmentSkillsModal` component.
+  - [ ] Design assessment process UI flow.
+  - [ ] Implement assessment skills listing and management page.
+  - [ ] Add assessment score badges to profile skills display.
+
+- [ ] **Frontend: Power Match UI**
+
+  - [ ] Create `PowerMatchesSection` for job seeker dashboard.
+  - [ ] Design power match card with match score, job details.
+  - [ ] Implement "View Job" and "Opt-out" actions for power matches.
+  - [ ] Add toast notifications for new power matches.
+  - [ ] Add warnings for power matches approaching 2-day view deadline.
+
+- [ ] **Testing: Pro Features**
+  - [ ] Write unit tests for pro feature database functions.
+  - [ ] Test daily check-in flow and status updates.
+  - [ ] Test power match generation, application, and auto-withdrawal.
+  - [ ] Verify assessment skills management UI.
+  - [ ] Test pro upgrade flow and feature toggles.
+
 ## Testing
 
 - [ ] Write unit tests for components

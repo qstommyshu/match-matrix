@@ -17,7 +17,6 @@ import {
   MapPin,
   Loader2,
   Plus,
-  ClipboardList,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import {
@@ -26,10 +25,13 @@ import {
   EmployerProfile,
   getUserApplications,
   Application,
+  Job,
 } from "@/lib/database";
 import { toast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
+import { cn, getStageBadgeColor } from "@/lib/utils";
+import BrowseAllJobsButton from "@/components/jobs/BrowseAllJobsButton";
 
 // Define the expected Job structure for this component
 type JobWithNestedEmployerProfile = {
@@ -51,35 +53,21 @@ type JobWithNestedEmployerProfile = {
     // Nest employer_profile within employer
     employer_profile?: EmployerProfile | null;
   };
-  employer_profile?: EmployerProfile;
   // skills?: JobSkill[]; // Add if needed, requires importing JobSkill
 };
 
-// Application Stage Badge mapping for colors
-const getStageBadgeColor = (stage: string | null) => {
-  switch (stage) {
-    case "Applied":
-      return "bg-blue-100 text-blue-800";
-    case "Screening":
-      return "bg-purple-100 text-purple-800";
-    case "Interview":
-      return "bg-yellow-100 text-yellow-800";
-    case "Offer":
-      return "bg-green-100 text-green-800";
-    case "Rejected":
-      return "bg-red-100 text-red-800";
-    case "Withdrawn":
-      return "bg-gray-100 text-gray-800";
-    default:
-      return "bg-gray-100 text-gray-800";
-  }
+// Application type that includes the nested Job
+type ApplicationWithJob = Application & {
+  job?: Job;
 };
 
-// Function to format stage display
-const formatStageDisplay = (stage: string | null) => {
-  if (!stage) return "Applied";
-  return stage;
-};
+// Placeholder type for Recent Applications section
+interface ApplicationStub {
+  id: number;
+  title: string;
+  company: string;
+  status: string;
+}
 
 export const JobSeekerDashboardPage: React.FC = () => {
   const { profile, jobSeekerProfile, isJobSeeker } = useProfile();
@@ -91,7 +79,7 @@ export const JobSeekerDashboardPage: React.FC = () => {
   const [isLoadingJobs, setIsLoadingJobs] = useState(true);
   const [jobsError, setJobsError] = useState<string | null>(null);
 
-  const [applications, setApplications] = useState<Application[]>([]);
+  const [applications, setApplications] = useState<ApplicationWithJob[]>([]);
   const [isLoadingApps, setIsLoadingApps] = useState(true);
   const [appsError, setAppsError] = useState<string | null>(null);
 
@@ -154,6 +142,7 @@ export const JobSeekerDashboardPage: React.FC = () => {
       if (isMounted) setIsLoadingApps(true);
       setAppsError(null);
       try {
+        // Fetch applications with job details
         const { applications: fetchedApps, error: fetchError } =
           await getUserApplications(profile.id);
         if (!isMounted) return;
@@ -162,7 +151,7 @@ export const JobSeekerDashboardPage: React.FC = () => {
           (a, b) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
-        setApplications(sortedApps);
+        setApplications(sortedApps as ApplicationWithJob[]); // Cast to include job
       } catch (err) {
         if (!isMounted) return;
         console.error("Error fetching applications:", err);
@@ -190,6 +179,12 @@ export const JobSeekerDashboardPage: React.FC = () => {
     };
   }, [profile, isJobSeeker]);
 
+  // Use the placeholder type
+  const recentApplications: ApplicationStub[] = [
+    // { id: 1, title: 'Software Engineer', company: 'Tech Corp', status: 'Applied' },
+    // { id: 2, title: 'Product Manager', company: 'Innovate Ltd', status: 'Interviewing' },
+  ];
+
   return (
     <div className="container mx-auto py-8 px-4 space-y-8">
       <PageHeader>
@@ -202,12 +197,7 @@ export const JobSeekerDashboardPage: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button
-            onClick={() => navigate("/job-search")}
-            className="flex gap-1"
-          >
-            <Search className="h-4 w-4" /> Find Jobs
-          </Button>
+          <BrowseAllJobsButton />
         </div>
       </PageHeader>
 
@@ -267,7 +257,7 @@ export const JobSeekerDashboardPage: React.FC = () => {
             ) : recommendedJobs.length > 0 ? (
               recommendedJobs.map((job) => {
                 const companyName =
-                  job.employer_profile?.company_name ||
+                  job.employer?.employer_profile?.company_name ||
                   "Company Name Unavailable";
                 const postedDate = new Date(
                   job.created_at
@@ -330,6 +320,10 @@ export const JobSeekerDashboardPage: React.FC = () => {
                 No jobs found.
               </div>
             )}
+            {/* Add Browse All Jobs button below the recommendations */}
+            <div className="mt-4 text-center border-t pt-4">
+              <BrowseAllJobsButton variant="link" showIcon={false} />
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -337,12 +331,10 @@ export const JobSeekerDashboardPage: React.FC = () => {
       {/* Recent Applications Card */}
       <Card className="glass-card">
         <CardHeader>
-          <CardTitle>Your Applications</CardTitle>
-          <CardDescription>
-            Track the status of your recent job applications.
-          </CardDescription>
+          <CardTitle>Recent Applications</CardTitle>
+          <CardDescription>Track your job application status.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent>
           {isLoadingApps ? (
             <div className="flex justify-center items-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -352,54 +344,45 @@ export const JobSeekerDashboardPage: React.FC = () => {
               <p>Error loading applications: {appsError}</p>
             </div>
           ) : applications.length > 0 ? (
-            applications.slice(0, 5).map((app) => (
-              <div
-                key={app.id}
-                className="border rounded-lg p-4 hover:shadow-md transition-shadow duration-200 glass-card-inner flex justify-between items-center"
-              >
-                <div>
-                  <h3 className="font-semibold text-lg mb-1">
-                    {app.job?.title || "Untitled Position"}
-                  </h3>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span>
-                      {app.job?.employer_profile?.company_name ||
-                        "Unknown Company"}
-                    </span>
-                    <span>·</span>
-                    <span>
+            <ul className="space-y-4">
+              {applications.map((app) => (
+                <li
+                  key={app.id}
+                  className="border rounded-lg p-4 hover:shadow-md transition-shadow duration-200 glass-card-inner flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2"
+                >
+                  <div className="flex-grow">
+                    <h4
+                      className="font-semibold cursor-pointer hover:underline"
+                      onClick={() => navigate(`/jobs/${app.job_id}`)}
+                    >
+                      {app.job?.title || "Job Title Unavailable"}
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      {app.job?.employer?.full_name || "Company Unavailable"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4 flex-shrink-0 mt-2 sm:mt-0">
+                    <Badge
+                      className={cn("border", getStageBadgeColor(app.stage))}
+                    >
+                      {app.stage}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
                       Applied: {new Date(app.created_at).toLocaleDateString()}
                     </span>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge className={getStageBadgeColor(app.stage)}>
-                    {formatStageDisplay(app.stage)}
-                  </Badge>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate(`/jobs/${app.job_id}`)}
-                  >
-                    View
-                  </Button>
-                </div>
-              </div>
-            ))
+                </li>
+              ))}
+            </ul>
           ) : (
             <div className="text-center text-muted-foreground py-8">
-              <ClipboardList className="mx-auto h-12 w-12 mb-4" />
-              <p>You haven't applied to any jobs yet.</p>
-              <Button className="mt-4" onClick={() => navigate("/job-search")}>
-                Search for Jobs
-              </Button>
+              <Briefcase className="mx-auto h-12 w-12 mb-4" />
+              <p>You haven't applied to any jobs recently.</p>
             </div>
           )}
-          {applications.length > 5 && (
-            <div className="text-center">
-              <Button variant="link" onClick={() => navigate("/applications")}>
-                View All Applications
-              </Button>
+          {applications.length > 0 && (
+            <div className="mt-4 text-center">
+              <Button variant="link">View All Applications</Button>
             </div>
           )}
         </CardContent>

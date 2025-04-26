@@ -11,7 +11,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, UserCircle, LogOut, LayoutDashboard } from "lucide-react";
+import {
+  ChevronDown,
+  UserCircle,
+  LogOut,
+  LayoutDashboard,
+  Briefcase,
+} from "lucide-react";
 
 const Header = () => {
   const { user, signOut } = useAuth();
@@ -41,6 +47,14 @@ const Header = () => {
           >
             Home
           </Link>
+          {user && (
+            <Link
+              to="/jobs"
+              className="text-sm font-medium hover:text-neon-purple transition-colors flex items-center gap-1"
+            >
+              <Briefcase className="h-4 w-4" /> Jobs
+            </Link>
+          )}
           <Link
             to="/about"
             className="text-sm font-medium hover:text-neon-purple transition-colors"

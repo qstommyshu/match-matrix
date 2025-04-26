@@ -29,6 +29,7 @@ import {
 import { toast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
+import BrowseAllJobsButton from "@/components/jobs/BrowseAllJobsButton";
 
 export const EmployerDashboardPage: React.FC = () => {
   const { profile, employerProfile, isEmployer } = useProfile();
@@ -128,6 +129,7 @@ export const EmployerDashboardPage: React.FC = () => {
           <Button onClick={() => navigate("/post-job")} className="flex gap-1">
             <Plus className="h-4 w-4" /> Post New Job
           </Button>
+          <BrowseAllJobsButton variant="outline" />
         </div>
       </PageHeader>
 
