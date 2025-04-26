@@ -202,6 +202,7 @@
     - [x] `applied_at` (timestamp, nullable)
   - [x] Create migration file for all pro-related schema changes.
   - [x] Update RLS policies for new tables (user can view/modify own data).
+    - [x] Add missing INSERT policy for power_matches for RPC calls (Fixes manual trigger issue)
 
 - [ ] **Backend: Pro Features Core Functions**
 
@@ -213,6 +214,7 @@
   - [x] Implement `updateAssessmentSkill` function.
   - [x] Implement `getPowerMatches` function.
   - [x] Implement `markPowerMatchViewed` function.
+  - [x] Implement `triggerUserPowerMatch` function (for manual trigger)
   - [ ] Implement Edge Function for daily power_match generation.
 
 - [ ] **Backend: Pro Features Automation Functions**
@@ -254,6 +256,8 @@
 
   - [x] Create `PowerMatchesSection` for job seeker dashboard.
   - [x] Design power match card with match score, job details.
+    - [x] Fix company name fetching in `getPowerMatches`.
+    - [x] Add "Viewed" indicator to card.
   - [x] Implement "View Job" and "Opt-out" actions for power matches.
   - [x] Add toast notifications for new power matches.
   - [x] Add warnings for power matches approaching 2-day view deadline.
@@ -267,22 +271,20 @@
 
 ## Pro Job Seeker Feature Enhancements (Planned)
 
-- [ ] **Assessment Skill Expiration Display**
+- [x] **Assessment Skill Expiration Display**
 
-  - [ ] **Frontend (`AssessmentSkillsModal.tsx`):** Calculate expiration date (verified_at + 90 days).
-  - [ ] **Frontend (`AssessmentSkillsModal.tsx`):** Display expiration date or days remaining for each assessed skill.
-  - [ ] **Frontend (`AssessmentSkillsModal.tsx`):** Add visual indicator for expired/expiring soon skills.
+  - [x] Calculate expiration date (verified_at + 90 days) in `AssessmentSkillsModal.tsx`.
+  - [x] Display expiration date.
+  - [x] Add visual cues (color/icon) for expired/expiring skills.
 
-- [ ] **Manual Power Match Trigger**
-  - [ ] **Database (SQL):** Create RPC function `trigger_user_power_match(p_user_id UUID)` in `18_add_pro_automation_functions.sql`.
-    - [ ] Function should verify `auth.uid() = p_user_id`.
-    - [ ] Function should call `find_eligible_power_match_jobs`.
-    - [ ] Function should insert results into `power_matches`.
-    - [ ] Function should return status/count.
-  - [ ] **Backend (`database.ts`):** Add `triggerUserPowerMatch` function to call the new RPC.
-  - [ ] **Frontend (`PowerMatchesSection.tsx`):** Add "Find Matches Now" button for Pro users.
-  - [ ] **Frontend (`PowerMatchesSection.tsx`):** Implement onClick handler, loading state, and toast feedback.
-  - [ ] **Frontend (`PowerMatchesSection.tsx`):** Refresh power match list on success.
+- [x] **Manual Power Match Trigger**
+  - [x] Create SQL RPC function `trigger_user_power_match`.
+  - [x] Create migration file `19_add_manual_power_match_trigger.sql`.
+  - [x] Modify SQL RPC function `trigger_user_power_match` to auto-apply immediately (Migration `23_modify_trigger_user_power_match_to_autoapply.sql`).
+  - [x] Add `triggerUserPowerMatch` helper to `database.ts`.
+  - [x] Update `TriggerPowerMatchResult` type and validation in `database.ts`.
+  - [x] Add "Find Matches Now" button to `PowerMatchesSection.tsx`.
+  - [x] Implement button handler to call RPC, show feedback (reflecting auto-apply), and refresh list.
 
 ## Testing
 

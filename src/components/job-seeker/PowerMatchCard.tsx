@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, ExternalLink, CheckCircle } from "lucide-react";
+import { AlertTriangle, ExternalLink, CheckCircle, Eye } from "lucide-react";
 import { PowerMatch, Job, markPowerMatchViewed } from "@/lib/database";
 import { toast } from "@/components/ui/use-toast";
 
@@ -83,13 +83,21 @@ export const PowerMatchCard: React.FC<PowerMatchCardProps> = ({
   return (
     <div className="border rounded-lg p-4 bg-background shadow-sm relative">
       {/* Status Badges */}
-      <div className="absolute top-2 right-2 flex gap-1">
+      <div className="absolute top-2 right-2 flex gap-1 flex-wrap justify-end">
         {isApplied && (
           <Badge
             variant="outline"
             className="text-xs border-blue-500 text-blue-700"
           >
             <CheckCircle className="h-3 w-3 mr-1" /> Auto-Applied
+          </Badge>
+        )}
+        {isViewed && (
+          <Badge
+            variant="outline"
+            className="text-xs border-green-600 text-green-700"
+          >
+            <Eye className="h-3 w-3 mr-1" /> Viewed
           </Badge>
         )}
         <Badge variant="secondary" className="text-xs">

@@ -1,4 +1,6 @@
 import { supabase } from "./supabase";
+import { useProfile } from "@/lib/ProfileContext";
+import { toast } from "@/components/ui/use-toast";
 
 // Types
 export interface Profile {
@@ -833,7 +835,6 @@ export const addExperience = async (
       return { experience: null, error };
     }
 
-    console.log("Experience successfully added with ID:", data?.id);
     return { experience: data as Experience | null, error: null };
   } catch (err) {
     console.error("Exception in addExperience:", err);
@@ -1042,7 +1043,11 @@ export const getPowerMatches = async (userId: string) => {
     .select(
       `
       *,
-      job:jobs(*, employer:profiles(company_name:employer_profiles(company_name))),
+      job:jobs(*, 
+        employer:profiles(*, 
+          employer_profile:employer_profiles(company_name)
+        )
+      ),
       application:applications(*)
     `
     )
@@ -1103,38 +1108,44 @@ export const getPowerMatch = async (powerMatchId: string) => {
 };
 
 // Function to manually trigger power match generation for a user
+// Matches the JSON structure returned by the trigger_user_power_match SQL function
 export interface TriggerPowerMatchResult {
   status: "success" | "error";
   message: string;
-  new_matches_found: number;
+  new_matches_applied: number;
 }
 
 export const triggerUserPowerMatch = async (
   userId: string
 ): Promise<{ data: TriggerPowerMatchResult | null; error: Error | null }> => {
+  // Use the Supabase client to call the RPC function
   const { data, error } = await supabase.rpc("trigger_user_power_match", {
     p_user_id: userId,
   });
 
   if (error) {
     console.error("Error triggering user power match RPC:", error);
-    return { data: null, error };
+    // Simple error handling to satisfy linter
+    return {
+      data: null,
+      error: new Error("Failed to trigger power match RPC."),
+    };
   }
 
-  // Supabase RPC returns the function's result directly in data
-  // We need to cast it to our expected type
+  // Supabase RPC returns the function's result directly in the `data` field.
+  // We need to cast it to our expected type and perform basic validation.
   const result = data as TriggerPowerMatchResult;
 
-  // Basic validation of the returned structure
   if (
     !result ||
     typeof result !== "object" ||
-    !result.status ||
-    !result.message ||
-    typeof result.new_matches_found !== "number"
+    (result.status !== "success" && result.status !== "error") || // Check valid status values
+    typeof result.message !== "string" ||
+    typeof result.new_matches_applied !== "number"
   ) {
     console.error(
-      "Invalid response structure from trigger_user_power_match RPC"
+      "Invalid response structure from trigger_user_power_match RPC:",
+      result // Log the actual received data for debugging
     );
     return {
       data: null,
@@ -1144,5 +1155,6 @@ export const triggerUserPowerMatch = async (
     };
   }
 
+  // Return the validated data structure
   return { data: result, error: null };
 };

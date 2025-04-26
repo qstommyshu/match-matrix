@@ -29,7 +29,6 @@ serve(async (req: Request) => {
     // Check for authorization header
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      console.log("→ Missing Authorization header");
       return new Response(
         JSON.stringify({ error: "Missing Authorization header" }),
         {
@@ -75,7 +74,6 @@ serve(async (req: Request) => {
       error: userError,
     } = await supabase.auth.getUser();
 
-    console.log("auth.getUser result:", { user, userError });
     if (userError || !user) {
       return new Response(
         JSON.stringify({
@@ -99,7 +97,6 @@ serve(async (req: Request) => {
       .select("*, job:job_id(*)")
       .eq("id", applicationId)
       .single();
-    console.log("application query result:", { application, applicationError });
     if (applicationError || !application) {
       return new Response(
         JSON.stringify({
@@ -241,8 +238,6 @@ serve(async (req: Request) => {
       )
       .eq("user_id", application.user_id);
 
-    console.log("skills query result:", { skills, skillsError });
-
     if (skillsError) {
       return new Response(
         JSON.stringify({
@@ -301,7 +296,6 @@ serve(async (req: Request) => {
     const yearsOfExperience =
       jobSeekerProfile?.years_of_experience || "Not specified";
 
-    console.log("Calling OpenAI with prompt:");
     // Generate a summary using OpenAI
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
@@ -337,7 +331,6 @@ Provide a concise summary (max 200 words) of how well this applicant matches the
       temperature: 0.7,
       max_tokens: 350,
     });
-    console.log("OpenAI response:", completion);
 
     const summary =
       completion.choices[0]?.message?.content || "Unable to generate summary";

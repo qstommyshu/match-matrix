@@ -20,12 +20,6 @@ type SupabaseClientWithFunctions = SupabaseClient & {
   };
 };
 
-// Log the functions URL for debugging
-console.log(
-  "supabase.functions.url =",
-  (supabase as SupabaseClientWithFunctions).functions?.url
-);
-
 // Helper authentication functions
 export const signUp = async (email: string, password: string) => {
   const { data, error } = await supabase.auth.signUp({

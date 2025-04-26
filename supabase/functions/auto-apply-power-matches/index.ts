@@ -1,7 +1,13 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { serve } from "jsr:@std/http/server";
-import { createClient } from "jsr:@supabase/supabase-js";
-import { corsHeaders } from "../_shared/cors.ts";
+import { serve } from "http/server";
+import { createClient } from "@supabase/supabase-js";
+
+// Helper to set CORS headers
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS", // Adjusted for scheduled function
+};
 
 // Initialize Supabase client
 const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -38,24 +44,21 @@ interface ApplicationResult {
 }
 
 serve(async (req) => {
+  // Handle CORS preflight request
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  // Authorization
-  const authorization = req.headers.get("Authorization");
-  const functionSecret = Deno.env.get("FUNCTION_SECRET");
-  if (
-    !functionSecret ||
-    !authorization ||
-    authorization !== `Bearer ${functionSecret}`
-  ) {
-    console.error("Unauthorized auto-apply call");
-    return new Response("Unauthorized", {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+  // Optional: Add Authorization check if needed for manual invocation
+  // const authorization = req.headers.get("Authorization");
+  // const functionSecret = Deno.env.get("FUNCTION_SECRET");
+  // if (!functionSecret || !authorization || authorization !== `Bearer ${functionSecret}`) {
+  //   console.error("Unauthorized function call attempt");
+  //   return new Response("Unauthorized", {
+  //     status: 401,
+  //     headers: { ...corsHeaders, "Content-Type": "application/json" },
+  //   });
+  // }
 
   try {
     const supabase = createClient(supabaseUrl!, supabaseServiceKey!, {

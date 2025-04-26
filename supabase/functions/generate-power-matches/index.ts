@@ -1,7 +1,13 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts"; // Add Supabase Edge Function types
-import { serve } from "jsr:@std/http/server";
-import { createClient } from "jsr:@supabase/supabase-js";
-import { corsHeaders } from "../_shared/cors.ts";
+import { serve } from "http/server";
+import { createClient } from "@supabase/supabase-js";
+
+// Helper to set CORS headers
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS", // Adjusted for typical function invocation
+};
 
 // Initialize Supabase client
 const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -12,10 +18,11 @@ if (!supabaseUrl || !supabaseServiceKey) {
   // Consider throwing an error or exiting depending on deployment context
 }
 
-// Type definition for the result of the SQL function
-interface EligibleJob {
-  job_id: string;
-  match_score: number;
+// Type definition for the result of the trigger_user_power_match SQL function
+interface TriggerResult {
+  status: "success" | "error";
+  message: string;
+  new_matches_found: number;
 }
 
 serve(async (req) => {
@@ -41,10 +48,8 @@ serve(async (req) => {
 
   try {
     // Create a Supabase client with the service role key
-    // Important: Use service role key for backend operations like this
     const supabase = createClient(supabaseUrl!, supabaseServiceKey!, {
       auth: {
-        // Required for service role key
         autoRefreshToken: false,
         persistSession: false,
       },
@@ -74,69 +79,67 @@ serve(async (req) => {
     }
 
     console.log(`Found ${proUsers.length} active pro users.`);
-    let powerMatchesCreated = 0;
+    let totalMatchesCreated = 0;
     let usersProcessed = 0;
+    let usersFailed = 0;
 
-    // 2. Process each pro user
+    // 2. Process each pro user by triggering the RPC function
     for (const user of proUsers) {
       usersProcessed++;
-      console.log(`Processing user: ${user.id}`);
+      console.log(`Triggering power match generation for user: ${user.id}`);
 
-      // 3. Find eligible jobs for the user
-      const { data: eligibleJobs, error: rpcError } = await supabase.rpc(
-        "find_eligible_power_match_jobs",
-        { p_user_id: user.id, p_limit: 3 }
+      const { data, error: rpcError } = await supabase.rpc(
+        "trigger_user_power_match",
+        { p_user_id: user.id }
       );
 
       if (rpcError) {
-        console.error(`Error finding jobs for user ${user.id}:`, rpcError);
+        console.error(
+          `Error triggering power match for user ${user.id}:`,
+          rpcError
+        );
+        usersFailed++;
         // Continue to next user, log error
         continue;
       }
 
-      const jobs = eligibleJobs as EligibleJob[] | null;
-
-      if (!jobs || jobs.length === 0) {
-        console.log(`No eligible power match jobs found for user ${user.id}.`);
+      // Basic validation of the returned data structure
+      const result = data as TriggerResult;
+      if (
+        !result ||
+        typeof result !== "object" ||
+        !result.status ||
+        !result.message ||
+        typeof result.new_matches_found !== "number"
+      ) {
+        console.error(
+          `Invalid response structure from trigger_user_power_match for user ${user.id}:`,
+          result
+        );
+        usersFailed++;
         continue;
       }
 
-      console.log(`Found ${jobs.length} eligible jobs for user ${user.id}.`);
-
-      // 4. Create power_match entries
-      const powerMatchInserts = jobs.map((job) => ({
-        user_id: user.id,
-        job_id: job.job_id,
-        match_score: job.match_score,
-        // application_id, viewed_at, applied_at are null initially
-      }));
-
-      const { error: insertError } = await supabase
-        .from("power_matches")
-        .insert(powerMatchInserts);
-
-      if (insertError) {
-        console.error(
-          `Error inserting power matches for user ${user.id}:`,
-          insertError
-        );
-        // Log error, potentially retry or skip user
-      } else {
-        powerMatchesCreated += powerMatchInserts.length;
+      if (result.status === "success") {
+        totalMatchesCreated += result.new_matches_found;
         console.log(
-          `Successfully created ${powerMatchInserts.length} power matches for user ${user.id}.`
+          `User ${user.id}: Success - ${result.message} (${result.new_matches_found} new matches)`
         );
+      } else {
+        // Handle specific errors reported by the function (e.g., user became inactive)
+        console.warn(`User ${user.id}: Failed - ${result.message}`);
+        usersFailed++;
       }
     }
 
-    const result = {
-      message: "Power match generation complete.",
+    const finalResult = {
+      message: "Power match generation trigger process complete.",
       usersProcessed,
-      powerMatchesCreated,
+      usersFailed,
+      totalNewMatchesCreated: totalMatchesCreated, // Renamed for clarity
     };
 
-    console.log("Function finished:", result);
-    return new Response(JSON.stringify(result), {
+    return new Response(JSON.stringify(finalResult), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });

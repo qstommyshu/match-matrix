@@ -250,13 +250,16 @@
 
 ## 2023-08-16
 
-- **Implementation:** Created database migration `17_add_pro_features.sql` for the Pro Job Seeker feature:
-  - Added `is_pro`, `pro_active_status`, `last_active_check_in` columns to `job_seeker_profiles`.
-  - Created `assessment_skills` table with appropriate columns and constraints.
-  - Created `power_matches` table with appropriate columns and constraints.
-  - Implemented RLS policies for the new tables and columns, allowing users to manage their own data.
-  - Marked corresponding tasks in `tasks.md` as complete.
-  - Next steps: Implement backend functions for pro features.
+- **Debug/Fix:** Resolved issue where the "Find Matches Now" button in `PowerMatchesSection.tsx` was not generating `power_matches` entries despite the underlying RPC call succeeding.
+  - **Diagnosis:** The RPC call `trigger_user_power_match` was executed successfully (returning `status: 'success'`) but reported finding 0 new matches.
+  - **Root Cause:** The function ran as the authenticated user (`SECURITY INVOKER`), but the RLS policies on `power_matches` were missing an `INSERT` policy for the user. The function could read jobs but couldn't write the results.
+  - **Fix:** Created migration `22_fix_power_match_rls.sql` to add the following policy:
+    ```sql
+    CREATE POLICY insert_own_power_matches ON public.power_matches
+        FOR INSERT
+        WITH CHECK (auth.uid() = user_id);
+    ```
+  - **Verification:** Confirmed the button now generates power matches correctly when called from the frontend.
 
 ## 2023-08-17
 
@@ -343,3 +346,42 @@
   - Marked corresponding UI tasks in `tasks.md` as complete.
   - **Core Pro Feature UI implementation is complete.** Pending payment integration and actual assessment flow.
   - Next steps: Testing Pro Features.
+
+## 2023-08-24
+
+- **Implementation:** Completed Pro Job Seeker Feature Enhancements:
+  - **Assessment Skill Expiration:**
+    - Updated `AssessmentSkillsModal.tsx` to calculate and display skill expiration dates (90 days from verification).
+    - Added conditional styling and icons to indicate expired or soon-to-expire skills.
+  - **Manual Power Match Trigger:**
+    - Created migration `19_add_manual_power_match_trigger.sql` with SQL RPC function `trigger_user_power_match`.
+    - Added `triggerUserPowerMatch` helper function to `database.ts`.
+    - Added "Find Matches Now" button to `PowerMatchesSection.tsx` for active Pro users.
+    - Implemented button handler with loading state, toast feedback, and list refresh.
+  - Marked enhancement tasks in `tasks.md` as complete.
+  - Next steps: Comprehensive testing of all Pro features.
+
+## 2023-08-25
+
+- **Refactor:** Modified the "Find Matches Now" functionality (`trigger_user_power_match` SQL function) to immediately auto-apply to newly found matches.
+  - **Reason:** User requirement changed from separate find/apply steps to a single atomic operation for the manual trigger.
+  - **Implementation:**
+    - Created migration `23_modify_trigger_user_power_match_to_autoapply.sql`.
+    - Updated `trigger_user_power_match` SQL function to:
+      - Loop through eligible jobs found by `find_eligible_power_match_jobs`.
+      - Insert into `power_matches`.
+      - Insert into `applications` (status/stage 'Applied').
+      - Update `power_matches` with the `application_id` and `applied_at` timestamp.
+      - Use sub-transactions (`BEGIN...EXCEPTION...END`) to handle errors per-job.
+      - Return count of _applications created_ (renamed field to `new_matches_applied`).
+    - Updated `TriggerPowerMatchResult` type in `database.ts`.
+    - Updated toast notification in `PowerMatchesSection.tsx` to reflect immediate application.
+  - **Note:** The separate `auto-apply-power-matches` Edge Function is still needed for periodic checks, but the manual button now provides immediate application.
+  - **Addendum:** Added `SECURITY DEFINER` to `trigger_user_power_match` function (in migration 23) to resolve RLS issues preventing application insertion when called via RPC by the user.
+
+## 2023-08-26
+
+- **UI/Bug Fix:** Addressed issues with the `PowerMatchCard` display.
+  - **Fix:** Corrected the Supabase select query in `getPowerMatches` (`database.ts`) to properly fetch the nested `employer_profile.company_name`.
+  - **UI:** Added a "Viewed" badge (with `Eye` icon) to `PowerMatchCard.tsx` to indicate when `viewed_at` is set.
+  - **UI:** Updated the description text in `PowerMatchesSection.tsx` to clarify the auto-withdrawal condition.

@@ -7,19 +7,27 @@ CREATE OR REPLACE FUNCTION find_eligible_power_match_jobs(p_user_id UUID, p_limi
 RETURNS TABLE (job_id UUID, match_score NUMERIC)
 LANGUAGE plpgsql
 AS $$
+DECLARE
+    is_pro_user BOOLEAN;
 BEGIN
-    -- Ensure the user is a Pro user and active (optional check, can be done in calling function)
-    -- PERFORM 1 FROM public.job_seeker_profiles jsp
-    -- WHERE jsp.id = p_user_id AND jsp.is_pro = TRUE AND jsp.pro_active_status = TRUE;
-    -- IF NOT FOUND THEN
-    --     RETURN QUERY SELECT uuid_nil(), 0.0::NUMERIC WHERE FALSE; -- Return empty if not pro/active
-    -- END IF;
+    -- Check if the user is a Pro user
+    SELECT jsp.is_pro
+    INTO is_pro_user
+    FROM public.job_seeker_profiles jsp
+    WHERE jsp.id = p_user_id;
+
+    -- Default to false if not found, though this shouldn't happen if called correctly
+    is_pro_user := COALESCE(is_pro_user, FALSE);
 
     RETURN QUERY
     WITH potential_jobs AS (
         SELECT
             j.id AS job_id,
-            public.calculate_match_score(p_user_id, j.id) AS calculated_score
+            -- Use the appropriate score calculation based on Pro status
+            (CASE
+                WHEN is_pro_user THEN public.calculate_pro_match_score(p_user_id, j.id)
+                ELSE public.calculate_match_score(p_user_id, j.id)
+            END)::NUMERIC AS calculated_score
         FROM public.jobs j
         WHERE j.status = 'open' -- Only consider open jobs
     )
@@ -46,7 +54,7 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION find_eligible_power_match_jobs(UUID, INT) IS 'Finds top N eligible jobs (>80% match score) for a Pro user, excluding already applied/matched jobs.';
+COMMENT ON FUNCTION find_eligible_power_match_jobs(UUID, INT) IS 'Finds top N eligible jobs (>80% match score) for a user. Uses assessment_skills ONLY for Pro users, otherwise uses user_skills. Excludes already applied/matched jobs.';
 
 -- Function to deactivate Pro users who haven't checked in recently
 CREATE OR REPLACE FUNCTION deactivate_inactive_pro_users()

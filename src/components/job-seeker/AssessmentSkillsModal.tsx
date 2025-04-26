@@ -16,6 +16,7 @@ import {
   Check,
   ChevronsUpDown,
   X,
+  Clock,
 } from "lucide-react";
 import {
   getAssessmentSkills,
@@ -221,14 +222,27 @@ export const AssessmentSkillsModal: React.FC<AssessmentSkillsModalProps> = ({
     }
   };
 
-  const getExpirationInfo = (verifiedAt: string | Date) => {
-    const verificationDate = new Date(verifiedAt);
-    const expirationDate = addDays(verificationDate, 90);
-    const expired = isPast(expirationDate);
-    const expiresIn = expired
-      ? "Expired"
-      : formatDistanceToNow(expirationDate, { addSuffix: true });
-    return { expired, expiresIn };
+  const getExpirationStatus = (
+    verifiedDate: string | Date
+  ): {
+    expiresOn: Date;
+    isExpired: boolean;
+    isExpiringSoon: boolean;
+    daysRemaining: number | null;
+  } => {
+    const verified = new Date(verifiedDate);
+    const expiresOn = new Date(verified);
+    expiresOn.setDate(expiresOn.getDate() + 90); // Add 90 days
+
+    const now = new Date();
+    const diffTime = expiresOn.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    const isExpired = diffTime <= 0;
+    const isExpiringSoon = !isExpired && diffDays <= 7; // Expiring within 7 days
+    const daysRemaining = isExpired ? null : diffDays;
+
+    return { expiresOn, isExpired, isExpiringSoon, daysRemaining };
   };
 
   return (
@@ -255,78 +269,48 @@ export const AssessmentSkillsModal: React.FC<AssessmentSkillsModalProps> = ({
           ) : error ? (
             <p className="text-center text-red-600">Error: {error}</p>
           ) : assessmentSkills.length > 0 ? (
-            <Fragment>
+            <>
               {assessmentSkills.map((skill) => {
-                const { expired, expiresIn } = getExpirationInfo(
-                  skill.verified_at
-                );
+                const { expiresOn, isExpired, isExpiringSoon, daysRemaining } =
+                  getExpirationStatus(skill.verified_at);
+                const expirationTextClass = cn("text-xs", {
+                  "text-red-600 font-medium": isExpired,
+                  "text-orange-600 font-semibold": isExpiringSoon,
+                  "text-muted-foreground": !isExpired && !isExpiringSoon,
+                });
+
                 return (
                   <div
                     key={skill.id}
-                    className="flex justify-between items-center p-3 border rounded-md bg-muted/30"
+                    className="flex justify-between items-start p-3 border rounded-md bg-muted/30"
                   >
-                    <div className="flex flex-col">
-                      <span className="font-medium">
-                        {skill.skill?.name || "Unknown Skill"}
-                      </span>
-                      <span
-                        className={`text-xs ${
-                          expired ? "text-red-600" : "text-muted-foreground"
-                        }`}
-                      >
-                        {expired
-                          ? `Expired ${expiresIn}`
-                          : `Expires ${expiresIn}`}
-                      </span>
+                    <div className="flex-1 mr-2">
+                      <p className="font-medium">
+                        {skill.skill?.name || "Skill Name Missing"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Verified on:{" "}
+                        {new Date(skill.verified_at).toLocaleDateString()}
+                      </p>
+                      <p className={expirationTextClass}>
+                        <Clock className="inline-block h-3 w-3 mr-1" />
+                        {isExpired
+                          ? "Assessment Expired"
+                          : isExpiringSoon
+                          ? `Expires in ${daysRemaining} days`
+                          : `Expires on: ${expiresOn.toLocaleDateString()}`}
+                      </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant="secondary"
-                        className="flex items-center gap-1"
-                      >
-                        <ShieldCheck className="h-3 w-3 text-green-600" />
-                        Verified
-                      </Badge>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive hover:bg-destructive/10"
-                            disabled={isDeleting === skill.id}
-                          >
-                            {isDeleting === skill.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <X className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will
-                              permanently remove the assessment verification for
-                              "{skill.skill?.name || "this skill"}".
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDeleteSkill(skill)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Yes, Remove Assessment
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
+                    <Badge
+                      variant={isExpired ? "destructive" : "secondary"}
+                      className="text-base font-semibold whitespace-nowrap"
+                    >
+                      {skill.assessment_score}%
+                    </Badge>
                   </div>
                 );
               })}
-            </Fragment>
+            </>
           ) : (
             <p className="text-center text-muted-foreground py-4">
               You haven't completed any skill assessments yet.

@@ -2,35 +2,35 @@
 
 ## Current Development Focus
 
-- Testing and refinement of the implemented Pro Job Seeker features.
-- Addressing any bugs or UI inconsistencies found during testing.
-- Planning for remaining tasks like payment integration and assessment flow.
+- Testing and refinement of Pro Job Seeker features (including enhancements).
+- Verifying Assessment Skill Expiration display logic.
+- Testing Manual Power Match Trigger functionality and feedback.
+- Planning for remaining tasks (payment, assessment creation).
 
 ## Technical Challenges
 
-- Ensuring the daily scheduled tasks (Edge Functions, SQL) run correctly and reliably.
-- Handling edge cases in the check-in and power match logic.
-- Thoroughly testing interactions between frontend components and backend functions.
+- Ensuring correct date calculations and timezone handling for expiration.
+- Verifying the manual trigger RPC function handles edge cases (e.g., user becomes inactive).
+- Comprehensive testing of interactions between frontend and backend components.
 
 ## Next Tasks
 
-1. Write unit tests for pro feature database functions.
-2. Test daily check-in flow and status updates.
-3. Test power match generation, application, and auto-withdrawal end-to-end.
-4. Verify assessment skills modal functionality.
-5. Test pro upgrade flow (excluding actual payment).
-6. Plan implementation for payment integration and assessment creation flow.
+1. Test Assessment Skill Expiration display (UI and logic).
+2. Test Manual Power Match Trigger (button state, RPC call, feedback, list refresh).
+3. Perform end-to-end testing of the core Pro feature flow.
+4. Write unit tests for new backend functions (`trigger_user_power_match` RPC, helper function).
+5. Plan implementation for payment integration and assessment creation flow.
 
 ## Current Status
 
-- Pro Job Seeker feature implementation (Backend & Frontend UI) is complete according to the initial plan.
-  - Database schema updated and migrated.
-  - Backend core functions implemented in `database.ts`.
-  - Backend automation logic created (SQL functions, Edge Functions).
+- Pro Job Seeker feature implementation (Backend & Frontend UI) including planned enhancements is complete.
+  - Database schema updated and migrated (including manual trigger RPC).
+  - Backend core & helper functions implemented.
+  - Backend automation logic created (SQL functions, Edge Functions - requires scheduling).
   - Frontend UI components created and integrated:
     - Upgrade banner/modal
     - Daily check-in modal/reminders
-    - Assessment skills modal
-    - Power match section/cards
-- **Pending:** Scheduling of automation tasks in Supabase, payment integration, assessment creation flow, and comprehensive testing.
-- Ready to begin testing phase.
+    - Assessment skills modal (with expiration display)
+    - Power match section/cards (with manual trigger button)
+- **Pending:** Scheduling of automation tasks, payment integration, assessment creation flow, and comprehensive testing.
+- Ready to begin testing phase for all Pro features.
