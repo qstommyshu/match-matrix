@@ -23,6 +23,8 @@ import { JobSearchPage } from "./pages/JobSearchPage";
 import ManageJobsPage from "./pages/ManageJobsPage";
 import ViewApplicantsPage from "./pages/ViewApplicantsPage";
 import UserProfilePage from "./pages/UserProfilePage";
+import { AboutPage } from "./pages/AboutPage";
+import { PricingPage } from "./pages/PricingPage";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +42,8 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/about" element={<AboutPage />} />
+                <Route path="/pricing" element={<PricingPage />} />
                 <Route
                   path="/profile-setup"
                   element={

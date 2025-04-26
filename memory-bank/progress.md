@@ -385,3 +385,7 @@
   - **Fix:** Corrected the Supabase select query in `getPowerMatches` (`database.ts`) to properly fetch the nested `employer_profile.company_name`.
   - **UI:** Added a "Viewed" badge (with `Eye` icon) to `PowerMatchCard.tsx` to indicate when `viewed_at` is set.
   - **UI:** Updated the description text in `PowerMatchesSection.tsx` to clarify the auto-withdrawal condition.
+
+## 2023-08-16 (Placeholder Date)
+
+- **UI Development:** Created placeholder pages and routes for `/about` and `/pricing` as linked in the Header.

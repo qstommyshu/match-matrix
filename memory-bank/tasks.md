@@ -52,7 +52,9 @@
   - [x] Implement dashboard routing container
   - [x] Add dashboard route to App router
   - [x] Populate dashboards with real data/widgets (Employer jobs, Job seeker recommendations **w/ company & skills**)
-- [ ] Implement navigation (Header exists, needs refinement)
+- [x] Implement navigation (Header exists, needs refinement)
+  - [x] Create `/about` page placeholder
+  - [x] Create `/pricing` page placeholder
 - [x] Create job listing components (Used in EmployerDashboard, JobSearchPage)
 - [x] Develop profile creation forms
 - [x] Design job search interface (JobSearchPage created)
@@ -293,6 +295,9 @@
 - [ ] Test authentication flows
 - [ ] Verify database operations
 - [ ] User acceptance testing
+- [x] **Setup:** Choose and install testing framework (Vitest + Testing Library)
+- [x] **Setup:** Configure testing environment (vite.config.ts, setupTests.ts)
+- [x] **Setup:** Add test scripts to package.json
 - [ ] **Testing: Pro Features**
   - [ ] Write unit tests for pro feature database functions.
   - [ ] Test daily check-in flow and status updates.
