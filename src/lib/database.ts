@@ -24,6 +24,10 @@ export interface JobSeekerProfile {
   profile_completeness: number | null;
   created_at: string;
   updated_at: string;
+  // Pro features
+  is_pro?: boolean; // Optional because it might not be selected everywhere
+  pro_active_status?: boolean; // Optional
+  last_active_check_in?: string | null; // Optional
 }
 
 export interface EmployerProfile {
@@ -128,6 +132,30 @@ export interface Experience {
 // Add type for Job with Applicant Count
 export interface JobWithApplicantCount extends Job {
   applicant_count: number;
+}
+
+// Pro Feature Types
+export interface AssessmentSkill {
+  id: string;
+  user_id: string;
+  skill_id: string;
+  assessment_score: number;
+  verified_at: string;
+  created_at: string;
+  skill?: Skill; // Optional join
+}
+
+export interface PowerMatch {
+  id: string;
+  user_id: string;
+  job_id: string;
+  application_id: string | null;
+  match_score: number;
+  created_at: string;
+  viewed_at: string | null;
+  applied_at: string | null;
+  job?: Job; // Optional join
+  application?: Application; // Optional join
 }
 
 // Profile functions
@@ -908,4 +936,213 @@ export const batchUpdateApplicationStage = async (
   });
 
   return { results: data, error };
+};
+
+// --- Pro Job Seeker Functions ---
+
+// Function to upgrade a job seeker account to Pro
+export const upgradeToProAccount = async (userId: string) => {
+  const { data, error } = await supabase
+    .from("job_seeker_profiles")
+    .update({ is_pro: true })
+    .eq("id", userId)
+    .select("id, is_pro")
+    .single();
+
+  return { profile: data, error };
+};
+
+// Function for a Pro job seeker to check in their active status
+export const checkInActiveStatus = async (userId: string) => {
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("job_seeker_profiles")
+    .update({ pro_active_status: true, last_active_check_in: now })
+    .eq("id", userId)
+    .select("id, pro_active_status, last_active_check_in")
+    .single();
+
+  return { profile: data, error };
+};
+
+// Function to get assessment skills for a user
+export const getAssessmentSkills = async (userId: string) => {
+  const { data, error } = await supabase
+    .from("assessment_skills")
+    .select(
+      `
+      *,
+      skill:skills(*)
+    `
+    )
+    .eq("user_id", userId);
+
+  return { assessmentSkills: data as AssessmentSkill[] | null, error };
+};
+
+// Function to add a new assessment skill
+export const addAssessmentSkill = async (
+  assessmentSkill: Omit<
+    AssessmentSkill,
+    "id" | "created_at" | "verified_at" | "skill"
+  > & { verified_at?: string } // Allow optional verified_at override
+) => {
+  const skillData = {
+    ...assessmentSkill,
+    verified_at: assessmentSkill.verified_at || new Date().toISOString(),
+  };
+  const { data, error } = await supabase
+    .from("assessment_skills")
+    .insert(skillData)
+    .select("* , skill:skills(*)") // Select joined skill
+    .single();
+
+  return { assessmentSkill: data as AssessmentSkill | null, error };
+};
+
+// Function to update an assessment skill (e.g., after reassessment)
+// Note: Use cautiously. Usually, new assessments might create new records or require specific logic.
+export const updateAssessmentSkill = async (
+  id: string,
+  updates: Partial<Pick<AssessmentSkill, "assessment_score">> & {
+    verified_at?: string;
+  } // Allow updating score and verified timestamp
+) => {
+  const updateData = {
+    ...updates,
+    verified_at: updates.verified_at || new Date().toISOString(),
+  };
+
+  const { data, error } = await supabase
+    .from("assessment_skills")
+    .update(updateData)
+    .eq("id", id)
+    .select("* , skill:skills(*)") // Select joined skill
+    .single();
+
+  return { assessmentSkill: data as AssessmentSkill | null, error };
+};
+
+// Function to delete an assessment skill
+export const deleteAssessmentSkill = async (assessmentSkillId: string) => {
+  // We might want to add an extra check here to ensure the user owns this skill,
+  // but RLS policy should prevent unauthorized deletion.
+  const { error } = await supabase
+    .from("assessment_skills")
+    .delete()
+    .eq("id", assessmentSkillId);
+
+  return { error };
+};
+
+// Function to get power matches for a user
+export const getPowerMatches = async (userId: string) => {
+  const { data, error } = await supabase
+    .from("power_matches")
+    .select(
+      `
+      *,
+      job:jobs(*, employer:profiles(company_name:employer_profiles(company_name))),
+      application:applications(*)
+    `
+    )
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  // Adjust type to reflect nested company_name
+  type PowerMatchWithJob = Omit<PowerMatch, "job"> & {
+    job?: Job & {
+      employer?: Profile & {
+        employer_profile?: { company_name: string } | null;
+      };
+    };
+  };
+
+  return {
+    powerMatches: data as PowerMatchWithJob[] | null,
+    error,
+  };
+};
+
+// Function to mark a power match as viewed by the user
+export const markPowerMatchViewed = async (powerMatchId: string) => {
+  const { data, error } = await supabase
+    .from("power_matches")
+    .update({ viewed_at: new Date().toISOString() })
+    .eq("id", powerMatchId)
+    .select("id, viewed_at")
+    .single();
+
+  return { powerMatch: data, error };
+};
+
+// Function to get details for a specific power match (useful if needed)
+export const getPowerMatch = async (powerMatchId: string) => {
+  const { data, error } = await supabase
+    .from("power_matches")
+    .select(
+      `
+      *,
+      job:jobs(*, employer:profiles(company_name:employer_profiles(company_name))),
+      application:applications(*)
+    `
+    )
+    .eq("id", powerMatchId)
+    .single();
+
+  // Adjust type to reflect nested company_name
+  type PowerMatchWithJob = Omit<PowerMatch, "job"> & {
+    job?: Job & {
+      employer?: Profile & {
+        employer_profile?: { company_name: string } | null;
+      };
+    };
+  };
+
+  return { powerMatch: data as PowerMatchWithJob | null, error };
+};
+
+// Function to manually trigger power match generation for a user
+export interface TriggerPowerMatchResult {
+  status: "success" | "error";
+  message: string;
+  new_matches_found: number;
+}
+
+export const triggerUserPowerMatch = async (
+  userId: string
+): Promise<{ data: TriggerPowerMatchResult | null; error: Error | null }> => {
+  const { data, error } = await supabase.rpc("trigger_user_power_match", {
+    p_user_id: userId,
+  });
+
+  if (error) {
+    console.error("Error triggering user power match RPC:", error);
+    return { data: null, error };
+  }
+
+  // Supabase RPC returns the function's result directly in data
+  // We need to cast it to our expected type
+  const result = data as TriggerPowerMatchResult;
+
+  // Basic validation of the returned structure
+  if (
+    !result ||
+    typeof result !== "object" ||
+    !result.status ||
+    !result.message ||
+    typeof result.new_matches_found !== "number"
+  ) {
+    console.error(
+      "Invalid response structure from trigger_user_power_match RPC"
+    );
+    return {
+      data: null,
+      error: new Error(
+        "Invalid response structure from power match trigger function."
+      ),
+    };
+  }
+
+  return { data: result, error: null };
 };

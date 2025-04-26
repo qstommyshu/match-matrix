@@ -205,58 +205,58 @@
 
 - [ ] **Backend: Pro Features Core Functions**
 
-  - [ ] Create types for `AssessmentSkill` and `PowerMatch` in `database.ts`.
-  - [ ] Implement `upgradeToProAccount` function.
-  - [ ] Implement `checkInActiveStatus` function to update last active check-in.
-  - [ ] Implement `getAssessmentSkills` function.
-  - [ ] Implement `addAssessmentSkill` function.
-  - [ ] Implement `updateAssessmentSkill` function.
-  - [ ] Implement `getPowerMatches` function.
-  - [ ] Implement `markPowerMatchViewed` function.
+  - [x] Create types for `AssessmentSkill` and `PowerMatch` in `database.ts`.
+  - [x] Implement `upgradeToProAccount` function.
+  - [x] Implement `checkInActiveStatus` function to update last active check-in.
+  - [x] Implement `getAssessmentSkills` function.
+  - [x] Implement `addAssessmentSkill` function.
+  - [x] Implement `updateAssessmentSkill` function.
+  - [x] Implement `getPowerMatches` function.
+  - [x] Implement `markPowerMatchViewed` function.
   - [ ] Implement Edge Function for daily power_match generation.
 
 - [ ] **Backend: Pro Features Automation Functions**
 
-  - [ ] Create SQL function for finding eligible power_match jobs (>80% match score, not applied).
-  - [ ] Create Edge Function `generate-power-matches` to:
-    - [ ] Select pro users with active status
-    - [ ] Find top 3 matching jobs for each user
-    - [ ] Create power_match entries
-  - [ ] Create Edge Function `auto-apply-power-matches` to:
-    - [ ] Create applications for power_matches without applications
-    - [ ] Update power_matches with applied_at timestamp
-  - [ ] Create Edge Function `check-power-match-views` to:
-    - [ ] Identify power_matches not viewed within 2 days
-    - [ ] Auto-withdraw applications for these power_matches
-  - [ ] Create SQL functions for scheduled tasks (daily check-ins, autowithdrawals)
+  - [x] Create SQL function for finding eligible power_match jobs (>80% match score, not applied).
+  - [x] Create Edge Function `generate-power-matches` to:
+    - [x] Select pro users with active status
+    - [x] Find top 3 matching jobs for each user
+    - [x] Create power_match entries
+  - [x] Create Edge Function `auto-apply-power-matches` to:
+    - [x] Create applications for power_matches without applications
+    - [x] Update power_matches with applied_at timestamp
+  - [x] Create Edge Function `check-power-match-views` to:
+    - [x] Identify power_matches not viewed within 2 days
+    - [x] Auto-withdraw applications for these power_matches
+  - [x] Create SQL functions for scheduled tasks (daily check-ins, autowithdrawals)
 
 - [ ] **Frontend: Pro Upgrade UI**
 
-  - [ ] Create `ProFeatureBanner` component for job seeker dashboard.
-  - [ ] Create `UpgradeToProModal` component with toggle and explanations.
-  - [ ] Add pro badge/indicator to job seeker profile UI.
+  - [x] Create `ProFeatureBanner` component for job seeker dashboard.
+  - [x] Create `UpgradeToProModal` component with toggle and explanations.
+  - [x] Add pro badge/indicator to job seeker profile UI.
   - [ ] Implement stripe or other payment integration for pro upgrade.
 
 - [ ] **Frontend: Active Check-in UI**
 
-  - [ ] Create `DailyCheckInModal` to appear for pro users who haven't checked in.
-  - [ ] Add check-in reminder notification to header for pro users.
-  - [ ] Implement auto check-in when pro user logs in.
+  - [x] Create `DailyCheckInModal` to appear for pro users who haven't checked in.
+  - [x] Add check-in reminder notification to header for pro users.
+  - [x] Implement auto check-in when pro user logs in.
 
 - [ ] **Frontend: Assessment Skills UI**
 
-  - [ ] Create `AssessmentSkillsModal` component.
+  - [x] Create `AssessmentSkillsModal` component.
   - [ ] Design assessment process UI flow.
-  - [ ] Implement assessment skills listing and management page.
+  - [x] Implement assessment skills listing and management page.
   - [ ] Add assessment score badges to profile skills display.
 
 - [ ] **Frontend: Power Match UI**
 
-  - [ ] Create `PowerMatchesSection` for job seeker dashboard.
-  - [ ] Design power match card with match score, job details.
-  - [ ] Implement "View Job" and "Opt-out" actions for power matches.
-  - [ ] Add toast notifications for new power matches.
-  - [ ] Add warnings for power matches approaching 2-day view deadline.
+  - [x] Create `PowerMatchesSection` for job seeker dashboard.
+  - [x] Design power match card with match score, job details.
+  - [x] Implement "View Job" and "Opt-out" actions for power matches.
+  - [x] Add toast notifications for new power matches.
+  - [x] Add warnings for power matches approaching 2-day view deadline.
 
 - [ ] **Testing: Pro Features**
   - [ ] Write unit tests for pro feature database functions.
@@ -265,6 +265,25 @@
   - [ ] Verify assessment skills management UI.
   - [ ] Test pro upgrade flow and feature toggles.
 
+## Pro Job Seeker Feature Enhancements (Planned)
+
+- [ ] **Assessment Skill Expiration Display**
+
+  - [ ] **Frontend (`AssessmentSkillsModal.tsx`):** Calculate expiration date (verified_at + 90 days).
+  - [ ] **Frontend (`AssessmentSkillsModal.tsx`):** Display expiration date or days remaining for each assessed skill.
+  - [ ] **Frontend (`AssessmentSkillsModal.tsx`):** Add visual indicator for expired/expiring soon skills.
+
+- [ ] **Manual Power Match Trigger**
+  - [ ] **Database (SQL):** Create RPC function `trigger_user_power_match(p_user_id UUID)` in `18_add_pro_automation_functions.sql`.
+    - [ ] Function should verify `auth.uid() = p_user_id`.
+    - [ ] Function should call `find_eligible_power_match_jobs`.
+    - [ ] Function should insert results into `power_matches`.
+    - [ ] Function should return status/count.
+  - [ ] **Backend (`database.ts`):** Add `triggerUserPowerMatch` function to call the new RPC.
+  - [ ] **Frontend (`PowerMatchesSection.tsx`):** Add "Find Matches Now" button for Pro users.
+  - [ ] **Frontend (`PowerMatchesSection.tsx`):** Implement onClick handler, loading state, and toast feedback.
+  - [ ] **Frontend (`PowerMatchesSection.tsx`):** Refresh power match list on success.
+
 ## Testing
 
 - [ ] Write unit tests for components
@@ -272,3 +291,10 @@
 - [ ] Test authentication flows
 - [ ] Verify database operations
 - [ ] User acceptance testing
+- [ ] **Testing: Pro Features**
+  - [ ] Write unit tests for pro feature database functions.
+  - [ ] Test daily check-in flow and status updates.
+  - [ ] Test power match generation, application, and auto-withdrawal.
+  - [ ] Verify assessment skills management UI (including add/delete/expiration).
+  - [ ] Test pro upgrade flow and feature toggles.
+  - [ ] Test manual power match trigger.

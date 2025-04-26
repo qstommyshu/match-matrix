@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,6 +17,9 @@ import {
   MapPin,
   Loader2,
   Plus,
+  ShieldCheck,
+  CheckCircle,
+  AlertTriangle,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import {
@@ -26,12 +29,19 @@ import {
   getUserApplications,
   Application,
   Job,
+  upgradeToProAccount,
+  checkInActiveStatus,
 } from "@/lib/database";
 import { toast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { cn, getStageBadgeColor } from "@/lib/utils";
 import BrowseAllJobsButton from "@/components/jobs/BrowseAllJobsButton";
+import { ProFeatureBanner } from "@/components/job-seeker/ProFeatureBanner";
+import { UpgradeToProModal } from "@/components/job-seeker/UpgradeToProModal";
+import { DailyCheckInModal } from "@/components/job-seeker/DailyCheckInModal";
+import { AssessmentSkillsModal } from "@/components/job-seeker/AssessmentSkillsModal";
+import { PowerMatchesSection } from "@/components/job-seeker/PowerMatchesSection";
 
 // Define the expected Job structure for this component
 type JobWithNestedEmployerProfile = {
@@ -83,8 +93,34 @@ export const JobSeekerDashboardPage: React.FC = () => {
   const [isLoadingApps, setIsLoadingApps] = useState(true);
   const [appsError, setAppsError] = useState<string | null>(null);
 
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [isUpgrading, setIsUpgrading] = useState(false);
+  const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
+  const [isAssessmentModalOpen, setIsAssessmentModalOpen] = useState(false);
+
   const profileCompleteness = jobSeekerProfile?.profile_completeness || 60;
   const displayName = profile?.full_name || profile?.email || "Job Seeker";
+  const isProUser = jobSeekerProfile?.is_pro || false;
+  const checkInNeeded = useCallback(() => {
+    if (!isProUser || !jobSeekerProfile) return false;
+
+    // Already active today? Check status flag first (quick check)
+    if (jobSeekerProfile.pro_active_status) {
+      // Double check timestamp - paranoia, maybe flag wasn't reset?
+      const lastCheckIn = jobSeekerProfile.last_active_check_in;
+      if (lastCheckIn) {
+        const lastCheckInDate = new Date(lastCheckIn);
+        const today = new Date();
+        // Check if last check-in was within the last 24 hours (approx)
+        if (today.getTime() - lastCheckInDate.getTime() < 24 * 60 * 60 * 1000) {
+          return false; // Checked in recently
+        }
+      }
+    }
+    // If not active or check-in is old/missing, they need to check in
+    return true;
+  }, [isProUser, jobSeekerProfile]);
 
   useEffect(() => {
     let isMounted = true;
@@ -185,21 +221,125 @@ export const JobSeekerDashboardPage: React.FC = () => {
     // { id: 2, title: 'Product Manager', company: 'Innovate Ltd', status: 'Interviewing' },
   ];
 
+  const handleUpgradeClick = () => {
+    setIsUpgradeModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsUpgradeModalOpen(false);
+  };
+
+  const handleConfirmUpgrade = async () => {
+    if (!profile) return;
+    setIsUpgrading(true);
+    try {
+      const { error } = await upgradeToProAccount(profile.id);
+      if (error) throw error;
+      toast({
+        title: "Upgrade Successful!",
+        description: "Welcome to Match Matrix Pro!",
+      });
+      setIsUpgradeModalOpen(false);
+      window.location.reload();
+    } catch (err) {
+      console.error("Error upgrading account:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to upgrade to Pro.";
+      toast({
+        title: "Upgrade Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpgrading(false);
+    }
+  };
+
+  const handleCloseCheckInModal = () => {
+    setIsCheckInModalOpen(false);
+  };
+
+  const handleConfirmCheckIn = async () => {
+    if (!profile) return;
+    setIsCheckingIn(true);
+    try {
+      const { error } = await checkInActiveStatus(profile.id);
+      if (error) throw error;
+      toast({
+        title: "Checked In Successfully!",
+        description: "Your active status is confirmed for today.",
+      });
+      // TODO: Ideally, update profile context instead of reloading
+      window.location.reload(); // Reload to reflect new status
+      setIsCheckInModalOpen(false);
+    } catch (err) {
+      console.error("Error during check-in:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to check in.";
+      toast({
+        title: "Check-in Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsCheckingIn(false);
+    }
+  };
+
   return (
     <div className="container mx-auto py-8 px-4 space-y-8">
       <PageHeader>
         <div className="space-y-0.5">
-          <h2 className="text-3xl font-bold tracking-tight">
-            Welcome, {displayName}!
+          <h2 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+            <span>Welcome, {displayName}!</span>
+            {isProUser && (
+              <Badge
+                variant="default"
+                className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full"
+              >
+                PRO
+              </Badge>
+            )}
+            {isProUser && !checkInNeeded() && (
+              <Badge
+                variant="outline"
+                className="text-xs border-green-500 text-green-700 font-medium"
+              >
+                <CheckCircle className="h-3 w-3 mr-1" /> Active Job Seeking
+                Status Confirmed Today
+              </Badge>
+            )}
+            {isProUser && checkInNeeded() && (
+              <Badge
+                variant="outline"
+                className="text-xs border-orange-500 text-orange-700 font-medium"
+              >
+                <AlertTriangle className="h-3 w-3 mr-1" /> Daily Check-in Needed
+              </Badge>
+            )}
           </h2>
           <p className="text-muted-foreground">
             Find new opportunities and track your job applications.
+            {isProUser && " Leverage your Pro features below!"}
           </p>
         </div>
         <div className="flex items-center space-x-2">
+          {isProUser && checkInNeeded() && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsCheckInModalOpen(true)}
+            >
+              Check In Now
+            </Button>
+          )}
           <BrowseAllJobsButton />
         </div>
       </PageHeader>
+
+      {!isProUser && <ProFeatureBanner onUpgradeClick={handleUpgradeClick} />}
+
+      {isProUser && <PowerMatchesSection />}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Profile Card */}
@@ -234,6 +374,15 @@ export const JobSeekerDashboardPage: React.FC = () => {
             >
               <Briefcase className="mr-2 h-4 w-4" /> View Profile
             </Button>
+            {isProUser && (
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setIsAssessmentModalOpen(true)}
+              >
+                <ShieldCheck className="mr-2 h-4 w-4" /> Manage Assessed Skills
+              </Button>
+            )}
           </CardContent>
         </Card>
 
@@ -387,6 +536,23 @@ export const JobSeekerDashboardPage: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      <UpgradeToProModal
+        isOpen={isUpgradeModalOpen}
+        onClose={handleCloseModal}
+        onConfirmUpgrade={handleConfirmUpgrade}
+        isUpgrading={isUpgrading}
+      />
+      <DailyCheckInModal
+        isOpen={isCheckInModalOpen}
+        onClose={handleCloseCheckInModal}
+        onConfirmCheckIn={handleConfirmCheckIn}
+        isCheckingIn={isCheckingIn}
+      />
+      <AssessmentSkillsModal
+        isOpen={isAssessmentModalOpen}
+        onClose={() => setIsAssessmentModalOpen(false)}
+      />
     </div>
   );
 };
