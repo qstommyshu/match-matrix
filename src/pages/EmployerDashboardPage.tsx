@@ -17,6 +17,7 @@ import {
   Briefcase,
   Loader2,
   Plus,
+  Zap,
 } from "lucide-react";
 import {
   getJobs,
@@ -290,8 +291,18 @@ export const EmployerDashboardPage: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => navigate(`/jobs/${job.id}/applicants`)}
+                    className="mb-2"
                   >
                     View Applicants
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/jobs/${job.id}/candidates`)}
+                    className="flex items-center"
+                  >
+                    <Zap className="mr-1 h-3 w-3 text-yellow-500" />
+                    Find Candidates
                   </Button>
                 </div>
               </div>

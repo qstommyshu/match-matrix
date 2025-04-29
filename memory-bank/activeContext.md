@@ -2,35 +2,37 @@
 
 ## Current Development Focus
 
-- Testing and refinement of Pro Job Seeker features (including enhancements).
-- Verifying Assessment Skill Expiration display logic.
-- Testing Manual Power Match Trigger functionality and feedback.
-- Planning for remaining tasks (payment, assessment creation).
+- Planning and implementing new feature set:
+  - Employer Power Match functionality with invitation-first workflow
+  - Enhanced Match Score Calculation with customizable criteria
+  - UI Dashboard Enhancements for both user types
+  - Comprehensive Unit Testing
+- Preparing database migrations for new tables and columns
+- Enhancing the matching algorithm to incorporate benefits and weighted criteria
+- Designing notification system for candidate invitations
 
 ## Technical Challenges
 
-- Ensuring correct date calculations and timezone handling for expiration.
-- Verifying the manual trigger RPC function handles edge cases (e.g., user becomes inactive).
-- Comprehensive testing of interactions between frontend and backend components.
+- Designing a flexible match criteria system that balances customization with performance
+- Creating employer power match functionality that respects job seeker privacy
+- Implementing an invitation workflow that feels intuitive for both employers and candidates
+- Building a real-time notification system for invitations
+- Optimizing database queries for enhanced match score calculations
+- Ensuring UI consistency while improving dashboard information density
 
 ## Next Tasks
 
-1. Test Assessment Skill Expiration display (UI and logic).
-2. Test Manual Power Match Trigger (button state, RPC call, feedback, list refresh).
-3. Perform end-to-end testing of the core Pro feature flow.
-4. Write unit tests for new backend functions (`trigger_user_power_match` RPC, helper function).
-5. Plan implementation for payment integration and assessment creation flow.
+1. Create database migration for match criteria tables and benefits columns
+2. Update match score calculation algorithm to incorporate weights
+3. Design and implement employer power match and invitation database structure
+4. Implement notification system for invitation alerts
+5. Create invitation UI components for both employers and candidates
+6. Set up testing infrastructure for core functionality
 
 ## Current Status
 
-- Pro Job Seeker feature implementation (Backend & Frontend UI) including planned enhancements is complete.
-  - Database schema updated and migrated (including manual trigger RPC).
-  - Backend core & helper functions implemented.
-  - Backend automation logic created (SQL functions, Edge Functions - requires scheduling).
-  - Frontend UI components created and integrated:
-    - Upgrade banner/modal
-    - Daily check-in modal/reminders
-    - Assessment skills modal (with expiration display)
-    - Power match section/cards (with manual trigger button)
-- **Pending:** Scheduling of automation tasks, payment integration, assessment creation flow, and comprehensive testing.
-- Ready to begin testing phase for all Pro features.
+- Project plan created for all new features
+- Detailed implementation approach documented in implementation-plan.md
+- Tasks organized into implementation phases with dependencies identified
+- Employer power match approach refined to follow invitation-first workflow
+- Ready to begin implementing Phase 1: Enhanced Match Score Calculation

@@ -29,6 +29,7 @@ import {
   Send,
   Users,
   XCircle,
+  Zap,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 
@@ -390,13 +391,23 @@ const JobDetailPage: React.FC = () => {
               )}
               {/* Add button to view applicants if owner */}
               {isOwner && (
-                <Button
-                  variant="outline"
-                  onClick={() => navigate(`/jobs/${jobId}/applicants`)} // TODO: Create this route/page
-                  className="w-full"
-                >
-                  <Users className="mr-2 h-4 w-4" /> View Applicants
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate(`/jobs/${jobId}/applicants`)}
+                    className="w-full"
+                  >
+                    <Users className="mr-2 h-4 w-4" /> View Applicants
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate(`/jobs/${jobId}/candidates`)}
+                    className="w-full"
+                  >
+                    <Zap className="mr-2 h-4 w-4 text-yellow-500" /> AI-Matched
+                    Candidates
+                  </Button>
+                </>
               )}
             </div>
           </div>

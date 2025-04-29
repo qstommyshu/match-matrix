@@ -160,6 +160,91 @@ export interface PowerMatch {
   application?: Application; // Optional join
 }
 
+// New types for Employer Power Match
+export type InvitationStatus = "pending" | "accepted" | "declined";
+
+export interface EmployerPowerMatch {
+  id: string;
+  employer_id: string;
+  job_id: string;
+  user_id: string; // The job seeker being matched
+  match_score: number;
+  created_at: string;
+  viewed_at: string | null;
+  sent_invitation_at: string | null;
+  invitation_status: InvitationStatus | null;
+  invitation_response_at: string | null;
+  // Optional joins for displaying info
+  job?: Pick<Job, "id" | "title">;
+  job_seeker?: {
+    id: string;
+    full_name: string | null;
+    email?: string;
+    user_skills?: string[];
+    job_seeker_profile?: {
+      headline: string | null;
+      location: string | null;
+      years_of_experience: number | null;
+      bio?: string | null;
+      education?: string | null;
+      desired_role?: string | null;
+    } | null;
+  };
+}
+
+export interface CandidateInvitation {
+  id: string;
+  employer_id: string;
+  job_id: string;
+  user_id: string; // The invited candidate
+  employer_power_match_id: string | null; // Link to the match
+  message: string | null; // Optional custom message from employer
+  created_at: string;
+  viewed_at: string | null;
+  status: InvitationStatus;
+  responded_at: string | null;
+  // Optional joins for displaying info
+  job?: Pick<Job, "id" | "title" | "location" | "remote">;
+  employer?: Pick<Profile, "id" | "full_name"> & {
+    employer_profile?: Pick<
+      EmployerProfile,
+      "company_name" | "logo_url"
+    > | null;
+  };
+}
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: string; // e.g., 'invitation', 'application_update', etc.
+  content: NotificationContent; // More specific content type
+  created_at: string;
+  read_at: string | null;
+}
+
+// Define specific content types for notifications
+export type NotificationContent =
+  | InvitationNotificationContent
+  | ApplicationUpdateNotificationContent // Example for future
+  | { type: string; data: unknown }; // Fallback for other types
+
+export interface InvitationNotificationContent {
+  type: "invitation";
+  invitationId: string;
+  jobId: string;
+  jobTitle: string;
+  employerId: string;
+  companyName: string;
+}
+
+// Example structure for another notification type
+export interface ApplicationUpdateNotificationContent {
+  type: "application_update";
+  applicationId: string;
+  jobTitle: string;
+  newStatus: string;
+}
+
 // Profile functions
 export const getProfile = async (userId: string) => {
   const { data, error } = await supabase
@@ -1118,43 +1203,600 @@ export interface TriggerPowerMatchResult {
 export const triggerUserPowerMatch = async (
   userId: string
 ): Promise<{ data: TriggerPowerMatchResult | null; error: Error | null }> => {
-  // Use the Supabase client to call the RPC function
   const { data, error } = await supabase.rpc("trigger_user_power_match", {
     p_user_id: userId,
   });
 
   if (error) {
-    console.error("Error triggering user power match RPC:", error);
-    // Simple error handling to satisfy linter
+    console.error("Error triggering power match:", error);
     return {
       data: null,
-      error: new Error("Failed to trigger power match RPC."),
+      error: new Error(`Failed to trigger power match: ${error.message}`),
     };
   }
 
-  // Supabase RPC returns the function's result directly in the `data` field.
-  // We need to cast it to our expected type and perform basic validation.
-  const result = data as TriggerPowerMatchResult;
+  return {
+    data: {
+      status: "success",
+      message: data?.message || "Power match trigger completed.",
+      new_matches_applied: data?.new_matches_applied || 0,
+    } as TriggerPowerMatchResult,
+    error: null,
+  };
+};
 
-  if (
-    !result ||
-    typeof result !== "object" ||
-    (result.status !== "success" && result.status !== "error") || // Check valid status values
-    typeof result.message !== "string" ||
-    typeof result.new_matches_applied !== "number"
-  ) {
+// --- Employer Power Match & Invitation Functions ---
+
+/**
+ * Fetches potential candidate matches for a specific job owned by the employer.
+ * Includes basic job seeker profile details for display.
+ */
+export const getEmployerPowerMatches = async (
+  employerId: string,
+  jobId: string,
+  filters?: {
+    minScore?: number;
+    status?: InvitationStatus | "not_invited";
+    page?: number;
+    pageSize?: number;
+  }
+) => {
+  const { page = 1, pageSize = 10 } = filters ?? {};
+  const offset = (page - 1) * pageSize;
+
+  // Define precise types for the raw Supabase query result
+  type RawJobData = { id: string; title: string };
+  type RawSkill = { name: string; category: string | null };
+  type RawUserSkillEntry = { skill: RawSkill | null };
+  type RawJobSeekerProfileData = {
+    headline: string | null;
+    location: string | null;
+    years_of_experience: number | null;
+    bio?: string | null;
+    education?: string | null;
+    desired_role?: string | null;
+  };
+  type RawJobSeekerData = {
+    id: string;
+    full_name: string | null;
+    email?: string;
+    job_seeker_profile:
+      | RawJobSeekerProfileData
+      | RawJobSeekerProfileData[]
+      | null;
+    user_skills: RawUserSkillEntry[] | null;
+  };
+  type RawEmployerPowerMatchData = {
+    id: string;
+    match_score: number;
+    created_at: string;
+    viewed_at: string | null;
+    sent_invitation_at: string | null;
+    invitation_status: InvitationStatus | null;
+    invitation_response_at: string | null;
+    // Supabase might return single objects or arrays for joins
+    job: RawJobData | RawJobData[] | null;
+    job_seeker: RawJobSeekerData | RawJobSeekerData[] | null;
+  };
+
+  let query = supabase
+    .from("employer_power_matches")
+    .select(
+      `
+      id,
+      match_score,
+      created_at,
+      viewed_at,
+      sent_invitation_at,
+      invitation_status,
+      invitation_response_at,
+      job:jobs!inner(id, title),
+      job_seeker:profiles!employer_power_matches_user_id_fkey(
+        id,
+        full_name,
+        email,
+        job_seeker_profile:job_seeker_profiles(
+          headline,
+          location,
+          years_of_experience,
+          bio,
+          education,
+          desired_role
+        ),
+        user_skills:user_skills(
+          skill:skills(
+            name,
+            category
+          )
+        )
+      )
+    `,
+      { count: "exact" }
+    )
+    .eq("employer_id", employerId)
+    .eq("job_id", jobId)
+    .order("match_score", { ascending: false })
+    .range(offset, offset + pageSize - 1);
+
+  if (filters?.minScore !== undefined) {
+    query = query.gte("match_score", filters.minScore);
+  }
+
+  if (filters?.status) {
+    if (filters.status === "not_invited") {
+      query = query.is("sent_invitation_at", null);
+    } else {
+      query = query.eq("invitation_status", filters.status);
+    }
+  }
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    console.error("Error fetching employer power matches:", error);
+    return { data: null, error, count: 0 };
+  }
+
+  // Map data to the correct type, handling potential arrays from joins
+  const typedData: EmployerPowerMatch[] = (data || []).map(
+    (item: RawEmployerPowerMatchData) => {
+      // Helper to safely get the first item if it's an array, or return the object/null
+      function getSingle<T>(val: T | T[] | null): T | null {
+        if (Array.isArray(val)) {
+          return val[0] || null;
+        }
+        return val;
+      }
+
+      const jobData = getSingle(item.job);
+      const jobSeekerData = getSingle(item.job_seeker);
+      const jobSeekerProfileData = jobSeekerData
+        ? getSingle(jobSeekerData.job_seeker_profile)
+        : null;
+
+      const skills =
+        jobSeekerData?.user_skills
+          ?.map((skillData: RawUserSkillEntry) => skillData.skill?.name)
+          .filter((name): name is string => !!name) || [];
+
+      return {
+        id: item.id,
+        employer_id: employerId,
+        job_id: jobId,
+        user_id: jobSeekerData?.id || "",
+        match_score: item.match_score,
+        created_at: item.created_at,
+        viewed_at: item.viewed_at,
+        sent_invitation_at: item.sent_invitation_at,
+        invitation_status: item.invitation_status,
+        invitation_response_at: item.invitation_response_at,
+        job: jobData ? { id: jobData.id, title: jobData.title } : undefined,
+        job_seeker: jobSeekerData
+          ? {
+              id: jobSeekerData.id,
+              full_name: jobSeekerData.full_name,
+              email: jobSeekerData.email,
+              user_skills: skills,
+              job_seeker_profile: jobSeekerProfileData
+                ? {
+                    headline: jobSeekerProfileData.headline,
+                    location: jobSeekerProfileData.location,
+                    years_of_experience:
+                      jobSeekerProfileData.years_of_experience,
+                    bio: jobSeekerProfileData.bio,
+                    education: jobSeekerProfileData.education,
+                    desired_role: jobSeekerProfileData.desired_role,
+                  }
+                : null,
+            }
+          : undefined,
+      };
+    }
+  );
+
+  return { data: typedData, error: null, count: count ?? 0 };
+};
+
+/**
+ * Updates the viewed_at timestamp for a specific employer power match.
+ */
+export const markEmployerPowerMatchViewed = async (
+  powerMatchId: string,
+  employerId: string // Ensure the employer owns the match
+) => {
+  const { data, error } = await supabase
+    .from("employer_power_matches")
+    .update({ viewed_at: new Date().toISOString() })
+    .eq("id", powerMatchId)
+    .eq("employer_id", employerId) // RLS also enforces this, but good practice
+    .is("viewed_at", null) // Only update if not already viewed
+    .select("id")
+    .single();
+
+  if (error) {
+    console.error("Error marking employer power match as viewed:", error);
+  }
+
+  return { data, error };
+};
+
+/**
+ * Creates a candidate invitation record and updates the corresponding power match.
+ * Assumes a notification will be created via a database trigger or separate call.
+ */
+export const sendCandidateInvitation = async (
+  powerMatchId: string,
+  employerId: string,
+  jobId: string,
+  userId: string, // Candidate ID
+  message?: string // Optional custom message
+) => {
+  // 1. Update the power match record
+  const { data: matchUpdateData, error: matchUpdateError } = await supabase
+    .from("employer_power_matches")
+    .update({
+      sent_invitation_at: new Date().toISOString(),
+      invitation_status: "pending",
+    })
+    .eq("id", powerMatchId)
+    .eq("employer_id", employerId)
+    .is("sent_invitation_at", null) // Only if not already sent
+    .select("id")
+    .single();
+
+  if (matchUpdateError) {
     console.error(
-      "Invalid response structure from trigger_user_power_match RPC:",
-      result // Log the actual received data for debugging
+      "Error updating power match for invitation:",
+      matchUpdateError
+    );
+    return { data: null, error: matchUpdateError };
+  }
+
+  if (!matchUpdateData) {
+    // Match might have already been invited or doesn't exist/belong to employer
+    console.warn(
+      `Power match ${powerMatchId} not updated, invitation not sent (already sent or invalid).`
     );
     return {
       data: null,
-      error: new Error(
-        "Invalid response structure from power match trigger function."
-      ),
+      error: new Error("Invitation already sent or match is invalid."),
     };
   }
 
-  // Return the validated data structure
-  return { data: result, error: null };
+  // 2. Create the candidate invitation record
+  const { data: invitationData, error: invitationError } = await supabase
+    .from("candidate_invitations")
+    .insert({
+      employer_id: employerId,
+      job_id: jobId,
+      user_id: userId,
+      employer_power_match_id: powerMatchId,
+      message: message,
+      status: "pending",
+    })
+    .select("id, created_at") // Select needed data
+    .single();
+
+  if (invitationError) {
+    console.error("Error creating candidate invitation:", invitationError);
+    // Attempt to rollback the power match update? (More complex, skip for now)
+    return { data: null, error: invitationError };
+  }
+
+  // TODO: Consider adding notification creation logic here if not handled by trigger
+
+  return { data: invitationData as CandidateInvitation | null, error: null };
 };
+
+/**
+ * Fetches invitations received by a specific job seeker.
+ * Includes details about the job and the inviting employer.
+ */
+export const getCandidateInvitations = async (
+  userId: string,
+  filters?: {
+    status?: InvitationStatus;
+    page?: number;
+    pageSize?: number;
+  }
+) => {
+  const { page = 1, pageSize = 10 } = filters ?? {};
+  const offset = (page - 1) * pageSize;
+
+  // Define expected query result structure
+  type CandidateInvitationQueryResult = {
+    id: string;
+    employer_id: string;
+    job_id: string;
+    employer_power_match_id: string | null;
+    message: string | null;
+    created_at: string;
+    viewed_at: string | null;
+    status: InvitationStatus;
+    responded_at: string | null;
+    job: Array<{
+      id: string;
+      title: string;
+      location: string | null;
+      remote: boolean;
+    }> | null;
+    employer: Array<{
+      id: string;
+      full_name: string | null;
+      employer_profile: Array<{
+        company_name: string | null;
+        logo_url: string | null;
+      }> | null;
+    }> | null;
+  };
+
+  let query = supabase
+    .from("candidate_invitations")
+    .select(
+      `
+      id,
+      employer_id,
+      job_id,
+      employer_power_match_id,
+      message,
+      created_at,
+      viewed_at,
+      status,
+      responded_at,
+      job:jobs!inner(
+        id,
+        title,
+        location,
+        remote
+      ),
+      employer:profiles!inner(
+        id,
+        full_name,
+        employer_profile:employer_profiles!inner(
+          company_name,
+          logo_url
+        )
+      )
+    `,
+      { count: "exact" }
+    )
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .range(offset, offset + pageSize - 1);
+
+  if (filters?.status) {
+    query = query.eq("status", filters.status);
+  }
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    console.error("Error fetching candidate invitations:", error);
+    return { data: null, error, count: 0 };
+  }
+
+  // Map data to the correct type
+  const typedData: CandidateInvitation[] = (data || []).map(
+    (item: CandidateInvitationQueryResult) => {
+      const jobData = item.job?.[0];
+      const employerData = item.employer?.[0];
+      const employerProfileData = employerData?.employer_profile?.[0];
+
+      return {
+        id: item.id,
+        employer_id: item.employer_id,
+        job_id: item.job_id,
+        user_id: userId, // Add userId from function params
+        employer_power_match_id: item.employer_power_match_id,
+        message: item.message,
+        created_at: item.created_at,
+        viewed_at: item.viewed_at,
+        status: item.status,
+        responded_at: item.responded_at,
+        job: jobData
+          ? {
+              id: jobData.id,
+              title: jobData.title,
+              location: jobData.location,
+              remote: jobData.remote,
+            }
+          : undefined,
+        employer: employerData
+          ? {
+              id: employerData.id,
+              full_name: employerData.full_name,
+              employer_profile: employerProfileData
+                ? {
+                    company_name: employerProfileData.company_name,
+                    logo_url: employerProfileData.logo_url,
+                  }
+                : null,
+            }
+          : undefined,
+      };
+    }
+  );
+
+  return { data: typedData, error: null, count: count ?? 0 };
+};
+
+/**
+ * Updates the status of a candidate invitation (accept/decline).
+ * Also updates the linked employer power match record.
+ */
+export const respondToCandidateInvitation = async (
+  invitationId: string,
+  candidateId: string, // User responding
+  newStatus: "accepted" | "declined" // Only allow accept/decline
+) => {
+  const responseTime = new Date().toISOString();
+
+  // 1. Update the invitation status
+  const { data: invitationUpdate, error: invitationError } = await supabase
+    .from("candidate_invitations")
+    .update({
+      status: newStatus,
+      responded_at: responseTime,
+      viewed_at: responseTime, // Mark as viewed if responding
+    })
+    .eq("id", invitationId)
+    .eq("user_id", candidateId)
+    .eq("status", "pending") // Can only respond to pending invitations
+    .select("id, employer_power_match_id") // Need power match ID for next step
+    .single();
+
+  if (invitationError) {
+    console.error("Error updating invitation status:", invitationError);
+    return { data: null, error: invitationError };
+  }
+
+  if (!invitationUpdate) {
+    console.warn(
+      `Invitation ${invitationId} not updated (already responded or invalid).`
+    );
+    return {
+      data: null,
+      error: new Error("Invitation already responded to or invalid."),
+    };
+  }
+
+  // 2. Update the corresponding employer power match record (if linked)
+  if (invitationUpdate.employer_power_match_id) {
+    const { error: matchError } = await supabase
+      .from("employer_power_matches")
+      .update({
+        invitation_status: newStatus,
+        invitation_response_at: responseTime,
+      })
+      .eq("id", invitationUpdate.employer_power_match_id);
+
+    if (matchError) {
+      // Log error but don't necessarily fail the whole operation
+      // The primary action (invitation update) succeeded.
+      console.error(
+        "Error updating linked employer power match status:",
+        matchError
+      );
+    }
+  }
+
+  // TODO: Consider adding notification for employer on acceptance/rejection?
+
+  return { data: { id: invitationUpdate.id }, error: null };
+};
+
+/**
+ * Fetches statistics about invitations sent by an employer.
+ */
+export const getEmployerInvitationStats = async (
+  employerId: string,
+  jobId?: string // Optional filter by job
+) => {
+  // Define the structure we expect from the RPC call (or build query manually)
+  // Using manual counts for better clarity
+  type StatusCount = { status: InvitationStatus; count: number };
+
+  try {
+    // Count pending
+    let pendingQuery = supabase
+      .from("candidate_invitations")
+      .select("*", { count: "exact", head: true })
+      .eq("employer_id", employerId)
+      .eq("status", "pending");
+    if (jobId) pendingQuery = pendingQuery.eq("job_id", jobId);
+    const { count: pendingCount, error: pendingError } = await pendingQuery;
+    if (pendingError) throw pendingError;
+
+    // Count accepted
+    let acceptedQuery = supabase
+      .from("candidate_invitations")
+      .select("*", { count: "exact", head: true })
+      .eq("employer_id", employerId)
+      .eq("status", "accepted");
+    if (jobId) acceptedQuery = acceptedQuery.eq("job_id", jobId);
+    const { count: acceptedCount, error: acceptedError } = await acceptedQuery;
+    if (acceptedError) throw acceptedError;
+
+    // Count declined
+    let declinedQuery = supabase
+      .from("candidate_invitations")
+      .select("*", { count: "exact", head: true })
+      .eq("employer_id", employerId)
+      .eq("status", "declined");
+    if (jobId) declinedQuery = declinedQuery.eq("job_id", jobId);
+    const { count: declinedCount, error: declinedError } = await declinedQuery;
+    if (declinedError) throw declinedError;
+
+    const totalSent =
+      (pendingCount ?? 0) + (acceptedCount ?? 0) + (declinedCount ?? 0);
+
+    const stats = {
+      totalSent: totalSent,
+      pending: pendingCount ?? 0,
+      accepted: acceptedCount ?? 0,
+      declined: declinedCount ?? 0,
+    };
+
+    return { data: stats, error: null };
+  } catch (error) {
+    // Type the error properly
+    let errorMessage = "An unknown error occurred";
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+    console.error("Error fetching employer invitation stats:", error);
+    return { data: null, error: new Error(errorMessage) };
+  }
+};
+
+/**
+ * Manually triggers the generation of employer power matches for a specific job.
+ *
+ * @param jobId The ID of the job to generate matches for
+ * @param employerId The ID of the employer (for authorization)
+ * @returns Object containing status, message, and count of new matches found
+ */
+export const triggerEmployerPowerMatch = async (
+  jobId: string,
+  employerId: string
+): Promise<{
+  data: {
+    status: string;
+    message: string;
+    job_title?: string;
+    potential_matches_evaluated?: number;
+    new_matches_found: number;
+  } | null;
+  error: Error | null;
+}> => {
+  try {
+    // First verify that the employer owns this job
+    const { data: jobData, error: jobError } = await supabase
+      .from("jobs")
+      .select("employer_id")
+      .eq("id", jobId)
+      .single();
+
+    if (jobError) throw jobError;
+    if (jobData.employer_id !== employerId) {
+      throw new Error("Not authorized to trigger matches for this job");
+    }
+
+    // Call the RPC function
+    const { data, error } = await supabase.rpc("trigger_employer_power_match", {
+      p_job_id: jobId,
+    });
+
+    if (error) throw error;
+
+    return { data, error: null };
+  } catch (error) {
+    console.error("Error triggering employer power matches:", error);
+    return {
+      data: null,
+      error: error instanceof Error ? error : new Error(String(error)),
+    };
+  }
+};
+
+// --- END Employer Power Match & Invitation Functions ---

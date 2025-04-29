@@ -17,6 +17,7 @@ import {
   LogOut,
   LayoutDashboard,
   Briefcase,
+  Mail,
 } from "lucide-react";
 
 const Header = () => {
@@ -113,6 +114,20 @@ const Header = () => {
                           <span>Dashboard</span>
                         </Link>
                       </DropdownMenuItem>
+
+                      {/* Job Invitations Link - Only for job seekers */}
+                      {isJobSeeker() && (
+                        <DropdownMenuItem asChild>
+                          <Link
+                            to="/candidate-invitations"
+                            className="flex items-center cursor-pointer"
+                          >
+                            <Mail className="mr-2 h-4 w-4" />
+                            <span>Job Invitations</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+
                       {/* My Profile Link */}
                       <DropdownMenuItem asChild>
                         <Link

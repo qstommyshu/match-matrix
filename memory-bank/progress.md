@@ -138,6 +138,8 @@
 - Applicants view for employers is now sorted by match score
 - Need to refine search/filtering, implement notification system, and build matching logic
 - AI Profile Summarization feature fully implemented and operational
+- Employer Power Match feature implemented (backend functions, UI section)
+- Fixed issue where Employers saw "Anonymous Candidate" in Potential Candidates view.
 
 ## 2023-08-04
 
@@ -389,3 +391,24 @@
 ## 2023-08-16 (Placeholder Date)
 
 - **UI Development:** Created placeholder pages and routes for `/about` and `/pricing` as linked in the Header.
+
+## Current Date
+
+- **Planning:** Added new feature plans to `tasks.md`:
+  - **Employer Power Match feature:** Mirror of job seeker power matches but for employers to find candidates
+  - **Enhanced Match Score Calculation:** Updated match algorithm with customizable criteria weights including benefits
+  - **User Dashboard Enhancements:** Improved UI for both job seeker and employer dashboards
+  - **Unit Tests:** Comprehensive test coverage for core functionality
+- Key implementation considerations:
+  - Employer Power Match will use a similar structure to the existing job seeker power match system
+  - Enhanced scoring will require new database tables for match criteria weights
+  - Dashboard improvements will focus on reducing information redundancy while adding value
+  - Test infrastructure will prioritize critical user flows
+
+## 2024-05-29
+
+- **Fix:** Addressed issue where employers saw "Anonymous Candidate" in the "Potential Candidates" section (`EmployerPowerMatchesSection.tsx`).
+  - **Diagnosis:** Confirmed the issue was specific to the employer's power match view.
+  - **RLS Fix:** Identified that the `profiles` RLS policy from `04_setup_profiles_tables.sql` was too restrictive (`auth.uid() = id`), preventing joins from `employer_power_matches`. Created migration `26_fix_profile_read_rls_for_employer_matches.sql` to drop the old policy and add specific policies allowing users to read their own profile and employers to read profiles of their matched candidates.
+  - **Data Mapping Fix:** Corrected the mapping logic within `getEmployerPowerMatches` in `src/lib/database.ts`. The original code incorrectly assumed nested joins (`job`, `job_seeker`) returned by Supabase were arrays, leading to `undefined` data. Implemented a `getSingle` helper to correctly handle either object or array[0] returns from Supabase joins.
+  - **Typing:** Addressed linter errors in `getEmployerPowerMatches` by defining more precise intermediate types for the raw query result, improving code clarity while maintaining the functional `getSingle` mapping logic.

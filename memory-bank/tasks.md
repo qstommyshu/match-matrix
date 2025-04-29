@@ -288,6 +288,128 @@
   - [x] Add "Find Matches Now" button to `PowerMatchesSection.tsx`.
   - [x] Implement button handler to call RPC, show feedback (reflecting auto-apply), and refresh list.
 
+## Employer Power Match & Invitations
+
+- [x] **Database: Schema Setup**
+  - [x] Create `employer_power_matches` table
+  - [x] Create `candidate_invitations` table
+  - [x] Create migrations for new tables
+  - [x] Define RLS policies for `employer_power_matches` (Employer can view/update own)
+  - [x] Define RLS policies for `candidate_invitations` (Employer can create, Candidate can read/update own)
+  - [x] **FIXED:** Update `profiles` RLS to allow employers to view matched candidate profiles
+- [x] **Backend: Core Functions**
+  - [x] Create types for `EmployerPowerMatch` and `CandidateInvitation`
+  - [x] Implement `getEmployerPowerMatches` function (fetches potential candidates for a job)
+    - [x] **FIXED:** Correct data mapping logic to handle Supabase join results (object vs array)
+    - [x] **FIXED:** Resolve linter errors related to typing
+  - [x] Implement `markEmployerPowerMatchViewed` function
+  - [x] Implement `sendCandidateInvitation` function (updates power match, creates invitation)
+  - [x] Implement `getCandidateInvitations` function (fetches invitations for a job seeker)
+  - [x] Implement `respondToCandidateInvitation` function (updates invitation and power match status)
+  - [x] Implement `getEmployerInvitationStats` function
+- [x] **Backend: Automation/Triggers**
+  - [x] Implement `trigger_employer_power_match` SQL function (finds potential matches for a job)
+  - [x] Implement `triggerEmployerPowerMatch` wrapper function in `database.ts`
+- [x] **Frontend: Employer View (`EmployerPowerMatchesSection.tsx`)**
+  - [x] Create component to display potential candidates for a job
+  - [x] Integrate `getEmployerPowerMatches` fetch
+  - [x] Display candidate info (name, match score, etc.)
+    - [x] **FIXED:** Ensure correct candidate name is displayed (not "Anonymous Candidate")
+  - [x] Add "View Profile" action (marks as viewed, potentially navigates later)
+  - [x] Add "Invite to Apply" action
+    - [x] Implement invitation dialog with customizable message
+    - [x] Integrate `sendCandidateInvitation` function call
+  - [x] Add filtering options (e.g., by match score)
+- [ ] **Frontend: Candidate View (Invitation Handling)**
+  - [ ] Create UI section/page to display received invitations
+  - [ ] Integrate `getCandidateInvitations` fetch
+  - [ ] Add actions to accept/decline invitations
+  - [ ] Integrate `respondToCandidateInvitation` function call
+- [ ] **Notifications**
+  - [ ] Implement notification system for new invitations (candidate)
+  - [ ] Implement notification system for invitation responses (employer)
+
+## Enhanced Match Score Calculation
+
+- [ ] **Database: Update Schema for Customized Match Criteria**
+
+  - [ ] **Database:** Add `job_match_criteria` table with columns:
+    - [ ] `id` (primary key)
+    - [ ] `job_id` (foreign key to jobs)
+    - [ ] `criteria_type` (enum: 'skills', 'experience', 'location', 'education', 'benefits', etc.)
+    - [ ] `weight` (numeric, 0-10 representing importance)
+    - [ ] `created_at` (timestamp)
+  - [ ] **Database:** Add `benefits` column (TEXT[]) to `jobs` table if not already done.
+  - [ ] **Database:** Add `desired_benefits` column (TEXT[]) to `job_seeker_profiles` table.
+  - [ ] **Database:** Create migration file for match criteria schema changes.
+  - [ ] **Database:** Update RLS policies for new tables.
+
+- [ ] **Backend: Enhanced Match Score Functions**
+
+  - [ ] **Backend:** Create types for `JobMatchCriteria` in `database.ts`.
+  - [ ] **Backend:** Implement `getJobMatchCriteria` function.
+  - [ ] **Backend:** Implement `updateJobMatchCriteria` function.
+  - [ ] **Backend:** Update match score SQL function to use weighted criteria.
+  - [ ] **Backend:** Create or update Edge Function for generating power matches to use new scoring system.
+  - [ ] **Backend:** Create database view for score breakdown by criteria for transparency.
+
+- [ ] **Frontend: Match Criteria Management UI**
+  - [ ] **Frontend:** Add match criteria section to job posting form.
+  - [ ] **Frontend:** Create sliders or input fields for criteria weights.
+  - [ ] **Frontend:** Add benefits selection to job posting form.
+  - [ ] **Frontend:** Add desired benefits selection to job seeker profile form.
+
+## User Dashboards Enhancement
+
+- [ ] **Frontend: Job Seeker Dashboard Enhancement**
+  - [ ] **Frontend:** Create a unified dashboard layout with clear sections.
+  - [ ] **Frontend:** Add profile completion progress card with suggestions.
+  - [ ] **Frontend:** Add application status summary card.
+  - [ ] **Frontend:** Create recent activity feed.
+  - [ ] **Frontend:** Add skills gap analysis based on desired roles.
+  - [ ] **Frontend:** Enhance power matches display with score breakdown.
+  - [ ] **Frontend:** Add market insights section (future feature).
+- [ ] **Frontend: Employer Dashboard Enhancement**
+
+  - [ ] **Frontend:** Create a unified dashboard layout with clear sections.
+  - [ ] **Frontend:** Add job posting metrics (views, applications, etc.).
+  - [ ] **Frontend:** Create applicant pipeline summary.
+  - [ ] **Frontend:** Add recent activity feed.
+  - [ ] **Frontend:** Create power matches overview section.
+  - [ ] **Frontend:** Add talent pool insights section (future feature).
+
+- [ ] **Frontend: UI Refinements**
+  - [ ] **Frontend:** Audit and reduce redundant information across pages.
+  - [ ] **Frontend:** Create consistent card components for different content types.
+  - [ ] **Frontend:** Implement collapsible sections for dense information.
+  - [ ] **Frontend:** Add tooltips for explaining complex features.
+  - [ ] **Frontend:** Enhance navigation with breadcrumbs where appropriate.
+  - [ ] **Frontend:** Ensure mobile responsiveness for all dashboard components.
+
+## Unit Tests
+
+- [ ] **Testing: Core Functions**
+
+  - [ ] **Testing:** Set up testing infrastructure (Jest/Vitest)
+  - [ ] **Testing:** Create test utilities for mocking Supabase client
+  - [ ] **Testing:** Write tests for database helper functions
+  - [ ] **Testing:** Write tests for matching algorithm
+  - [ ] **Testing:** Write tests for application logic
+
+- [ ] **Testing: UI Components**
+
+  - [ ] **Testing:** Set up React Testing Library
+  - [ ] **Testing:** Write tests for form components
+  - [ ] **Testing:** Write tests for dashboard components
+  - [ ] **Testing:** Write tests for critical user flows
+  - [ ] **Testing:** Create test data generators
+
+- [ ] **Testing: Edge Functions**
+  - [ ] **Testing:** Create test suite for edge functions
+  - [ ] **Testing:** Write tests for power match generation
+  - [ ] **Testing:** Write tests for AI summary generation
+  - [ ] **Testing:** Write tests for employer power matches
+
 ## Testing
 
 - [ ] Write unit tests for components
