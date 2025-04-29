@@ -321,13 +321,13 @@
     - [x] Integrate `sendCandidateInvitation` function call
   - [x] Add filtering options (e.g., by match score)
 - [ ] **Frontend: Candidate View (Invitation Handling)**
-  - [ ] Create UI section/page to display received invitations
-  - [ ] Integrate `getCandidateInvitations` fetch
-  - [ ] Add actions to accept/decline invitations
-  - [ ] Integrate `respondToCandidateInvitation` function call
-- [ ] **Notifications**
-  - [ ] Implement notification system for new invitations (candidate)
-  - [ ] Implement notification system for invitation responses (employer)
+  - [x] Create UI section/page to display received invitations (`InvitationsPage.tsx`)
+  - [x] Integrate `getCandidateInvitations` fetch
+  - [x] Add actions to accept/decline invitations
+  - [x] Integrate `respondToCandidateInvitation` function call
+- [x] **Notifications**
+  - [x] Implement notification system for new invitations (candidate)
+  - [x] Implement notification system for invitation responses (employer)
 
 ## Enhanced Match Score Calculation
 

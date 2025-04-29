@@ -206,7 +206,7 @@ export interface CandidateInvitation {
   // Optional joins for displaying info
   job?: Pick<Job, "id" | "title" | "location" | "remote">;
   employer?: Pick<Profile, "id" | "full_name"> & {
-    employer_profile?: Pick<
+    employer_profiles?: Pick<
       EmployerProfile,
       "company_name" | "logo_url"
     > | null;
@@ -1523,7 +1523,7 @@ export const getCandidateInvitations = async (
     employer: Array<{
       id: string;
       full_name: string | null;
-      employer_profile: Array<{
+      employer_profiles: Array<{
         company_name: string | null;
         logo_url: string | null;
       }> | null;
@@ -1543,16 +1543,16 @@ export const getCandidateInvitations = async (
       viewed_at,
       status,
       responded_at,
-      job:jobs!inner(
+      job:jobs!candidate_invitations_job_id_fkey(
         id,
         title,
         location,
         remote
       ),
-      employer:profiles!inner(
+      employer:profiles!candidate_invitations_employer_id_fkey(
         id,
         full_name,
-        employer_profile:employer_profiles!inner(
+        employer_profiles(
           company_name,
           logo_url
         )
@@ -1560,13 +1560,15 @@ export const getCandidateInvitations = async (
     `,
       { count: "exact" }
     )
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .range(offset, offset + pageSize - 1);
+    .eq("user_id", userId);
 
   if (filters?.status) {
     query = query.eq("status", filters.status);
   }
+
+  query = query
+    .order("created_at", { ascending: false })
+    .range(offset, offset + pageSize - 1);
 
   const { data, error, count } = await query;
 
@@ -1580,7 +1582,7 @@ export const getCandidateInvitations = async (
     (item: CandidateInvitationQueryResult) => {
       const jobData = item.job?.[0];
       const employerData = item.employer?.[0];
-      const employerProfileData = employerData?.employer_profile?.[0];
+      const employerProfileData = employerData?.employer_profiles?.[0];
 
       return {
         id: item.id,
@@ -1605,7 +1607,7 @@ export const getCandidateInvitations = async (
           ? {
               id: employerData.id,
               full_name: employerData.full_name,
-              employer_profile: employerProfileData
+              employer_profiles: employerProfileData
                 ? {
                     company_name: employerProfileData.company_name,
                     logo_url: employerProfileData.logo_url,

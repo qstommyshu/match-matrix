@@ -177,20 +177,6 @@ export const EmployerPowerMatchesPage: React.FC = () => {
       </PageHeader>
 
       <Tabs defaultValue="power-matches" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger
-            value="power-matches"
-            className="flex items-center gap-1"
-          >
-            <Zap className="h-4 w-4 text-yellow-500" />
-            AI-Matched Candidates
-          </TabsTrigger>
-          <TabsTrigger value="invited" className="flex items-center gap-1">
-            <Users className="h-4 w-4" />
-            Invited Candidates
-          </TabsTrigger>
-        </TabsList>
-
         <TabsContent value="power-matches" className="w-full">
           {profile && job && (
             <EmployerPowerMatchesSection

@@ -26,6 +26,7 @@ import UserProfilePage from "./pages/UserProfilePage";
 import { AboutPage } from "./pages/AboutPage";
 import { PricingPage } from "./pages/PricingPage";
 import { EmployerPowerMatchesPage } from "./pages/EmployerPowerMatchesPage";
+import { InvitationsPage } from "./pages/InvitationsPage";
 
 const queryClient = new QueryClient();
 
@@ -162,6 +163,14 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <UserProfilePage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/invitations"
+                  element={
+                    <ProtectedRoute allowedRoles={["job_seeker"]}>
+                      <InvitationsPage />
                     </ProtectedRoute>
                   }
                 />
