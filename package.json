@@ -12,8 +12,8 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "coverage": "vitest run --coverage",
-    "db:migrate": "echo \"Warning: This script is deprecated. Use db:migrate:direct instead.\" && node scripts/run_migrations.js",
-    "db:migrate:direct": "node scripts/direct_migration.js"
+    "db:migrate": "node scripts/direct_migration.js",
+    "vercel-build": "npm test && npm run build"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
