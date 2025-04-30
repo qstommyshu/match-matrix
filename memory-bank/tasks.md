@@ -154,16 +154,16 @@
 
 ## Developer Experience
 
-- [ ] **Basic CI/CD Pipeline**
+- [x] **Basic CI/CD Pipeline**
   - [x] Choose CI/CD platform (e.g., GitHub Actions, Vercel, Netlify).
-  - [ ] Configure build script in `package.json` if necessary.
-  - [ ] Create workflow configuration file (e.g., `.github/workflows/deploy.yml`).
-  - [ ] Define trigger (e.g., push to `main`).
-  - [ ] Add steps: checkout, setup Node, install dependencies, build.
-  - [ ] (Optional) Add step: run tests (if tests exist).
-  - [ ] Configure deployment step (e.g., using Vercel CLI, Netlify CLI, or GitHub Actions deploy actions).
+  - [x] Configure build script in `package.json` if necessary.
+  - [x] Create workflow configuration file (e.g., `.github/workflows/deploy.yml`).
+  - [x] Define trigger (e.g., push to `main`).
+  - [x] Add steps: checkout, setup Node, install dependencies, build.
+  - [x] (Optional) Add step: run tests (if tests exist).
+  - [x] Configure deployment step (e.g., using Vercel CLI, Netlify CLI, or GitHub Actions deploy actions).
   - [x] Set up environment variables (Supabase URL/Key, OpenAI Key) as secrets in the CI/CD platform.
-  - [ ] **Testing:** Trigger pipeline and verify successful build and deployment.
+  - [x] **Testing:** Trigger pipeline and verify successful build and deployment.
 
 ## Pro Job Seeker Feature
 
@@ -202,7 +202,6 @@
   - [x] Implement `getPowerMatches` function.
   - [x] Implement `markPowerMatchViewed` function.
   - [x] Implement `triggerUserPowerMatch` function (for manual trigger)
-  - [ ] Implement Edge Function for daily power_match generation.
 
 - [ ] **Backend: Pro Features Automation Functions**
 
@@ -226,7 +225,7 @@
   - [x] Add pro badge/indicator to job seeker profile UI.
   - [ ] Implement stripe or other payment integration for pro upgrade.
 
-- [ ] **Frontend: Active Check-in UI**
+- [x] **Frontend: Active Check-in UI**
 
   - [x] Create `DailyCheckInModal` to appear for pro users who haven't checked in.
   - [x] Add check-in reminder notification to header for pro users.
@@ -239,7 +238,7 @@
   - [x] Implement assessment skills listing and management page.
   - [ ] Add assessment score badges to profile skills display.
 
-- [ ] **Frontend: Power Match UI**
+- [x] **Frontend: Power Match UI**
 
   - [x] Create `PowerMatchesSection` for job seeker dashboard.
   - [x] Design power match card with match score, job details.
@@ -248,13 +247,6 @@
   - [x] Implement "View Job" and "Opt-out" actions for power matches.
   - [x] Add toast notifications for new power matches.
   - [x] Add warnings for power matches approaching 2-day view deadline.
-
-- [ ] **Testing: Pro Features**
-  - [ ] Write unit tests for pro feature database functions.
-  - [ ] Test daily check-in flow and status updates.
-  - [ ] Test power match generation, application, and auto-withdrawal.
-  - [ ] Verify assessment skills management UI.
-  - [ ] Test pro upgrade flow and feature toggles.
 
 ## Pro Job Seeker Feature Enhancements (Planned)
 
@@ -356,12 +348,9 @@
   - [ ] **Frontend:** Add market insights section (future feature).
 - [ ] **Frontend: Employer Dashboard Enhancement**
 
-  - [ ] **Frontend:** Create a unified dashboard layout with clear sections.
   - [x] **Frontend:** Add job posting metrics (views, applications, etc.).
-  - [ ] **Frontend:** Create applicant pipeline summary.
-  - [ ] **Frontend:** Add recent activity feed.
-  - [ ] **Frontend:** Create power matches overview section.
-  - [ ] **Frontend:** Add talent pool insights section (future feature).
+  - [x] **Frontend:** Add recent activity feed.
+  - [x] **Frontend:** Create power matches overview section.
 
 - [ ] **Frontend: UI Refinements**
   - [x] **Frontend:** Audit and reduce redundant information across pages.
@@ -375,7 +364,7 @@
 
 - [ ] **Testing: Core Functions**
 
-  - [ ] **Testing:** Set up testing infrastructure (Jest/Vitest)
+  - [x] **Testing:** Set up testing infrastructure (Jest/Vitest)
   - [ ] **Testing:** Create test utilities for mocking Supabase client
   - [ ] **Testing:** Write tests for database helper functions
   - [ ] **Testing:** Write tests for matching algorithm
@@ -383,9 +372,9 @@
 
 - [ ] **Testing: UI Components**
 
-  - [ ] **Testing:** Set up React Testing Library
-  - [ ] **Testing:** Write tests for form components
-  - [ ] **Testing:** Write tests for dashboard components
+  - [x] **Testing:** Set up React Testing Library
+  - [x] **Testing:** Write tests for form components
+  - [x] **Testing:** Write tests for dashboard components
   - [ ] **Testing:** Write tests for critical user flows
   - [ ] **Testing:** Create test data generators
 
@@ -397,7 +386,10 @@
 
 ## Testing
 
-- [ ] Write unit tests for components
+- [ ] Write unit tests for components // Mark as in progress or partially complete
+  - [x] Test UpdateBenefitsModal.tsx
+  - [x] Test UpdateSkillsModal.tsx
+  - [x] Test PageHeader.tsx
 - [ ] Implement integration tests
 - [ ] Test authentication flows
 - [ ] Verify database operations
