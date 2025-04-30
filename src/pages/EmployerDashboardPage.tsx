@@ -18,6 +18,9 @@ import {
   Loader2,
   Plus,
   Zap,
+  TrendingUp,
+  UserCheck,
+  Award,
 } from "lucide-react";
 import {
   getJobs,
@@ -26,6 +29,9 @@ import {
   Profile,
   getEmployerJobsWithApplicantCount,
   JobWithApplicantCount,
+  getEmployerTotalApplicants,
+  getEmployerTotalOffersExtended,
+  getEmployerActiveJobsCount,
 } from "@/lib/database";
 import { toast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -35,7 +41,7 @@ import BrowseAllJobsButton from "@/components/jobs/BrowseAllJobsButton";
 export const EmployerDashboardPage: React.FC = () => {
   const { profile, employerProfile, isEmployer } = useProfile();
   const navigate = useNavigate();
-  const [postedJobs, setPostedJobs] = useState<Job[]>([]);
+  const [postedJobs, setPostedJobs] = useState<JobWithApplicantCount[]>([]);
   const [isLoadingJobs, setIsLoadingJobs] = useState(false);
   const [jobsError, setJobsError] = useState<string | null>(null);
   const [recentJobsWithCounts, setRecentJobsWithCounts] = useState<
@@ -43,6 +49,18 @@ export const EmployerDashboardPage: React.FC = () => {
   >([]);
   const [isLoadingRecentJobs, setIsLoadingRecentJobs] = useState(true);
   const [recentJobsError, setRecentJobsError] = useState<string | null>(null);
+
+  const [stats, setStats] = useState<{
+    totalActiveJobs: number | null;
+    totalApplicants: number | null;
+    totalOffers: number | null;
+  }>({
+    totalActiveJobs: null,
+    totalApplicants: null,
+    totalOffers: null,
+  });
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [statsError, setStatsError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -52,7 +70,10 @@ export const EmployerDashboardPage: React.FC = () => {
         setIsLoadingJobs(true);
         setJobsError(null);
         try {
-          const { jobs, error } = await getJobs({ employerId: profile.id });
+          const { jobs, error } = await getEmployerJobsWithApplicantCount(
+            profile.id,
+            undefined
+          );
           if (!isMounted) return;
           if (error) throw error;
           setPostedJobs(jobs || []);
@@ -114,6 +135,73 @@ export const EmployerDashboardPage: React.FC = () => {
     };
   }, [profile, isEmployer]);
 
+  useEffect(() => {
+    let isMounted = true;
+    if (profile?.id && isEmployer()) {
+      const fetchStats = async () => {
+        if (!isMounted) return;
+        setIsLoadingStats(true);
+        setStatsError(null);
+        try {
+          const [activeJobsResult, applicantsResult, offersResult] =
+            await Promise.all([
+              getEmployerActiveJobsCount(profile.id),
+              getEmployerTotalApplicants(profile.id),
+              getEmployerTotalOffersExtended(profile.id),
+            ]);
+
+          if (!isMounted) return;
+
+          if (activeJobsResult.error) {
+            throw new Error(
+              `Failed to fetch active jobs count: ${activeJobsResult.error.message}`
+            );
+          }
+          if (applicantsResult.error) {
+            throw new Error(
+              `Failed to fetch total applicants: ${applicantsResult.error.message}`
+            );
+          }
+          if (offersResult.error) {
+            throw new Error(
+              `Failed to fetch total offers: ${offersResult.error.message}`
+            );
+          }
+
+          setStats({
+            totalActiveJobs: activeJobsResult.data,
+            totalApplicants: applicantsResult.data,
+            totalOffers: offersResult.data,
+          });
+        } catch (error) {
+          if (!isMounted) return;
+          console.error("Failed to fetch employer stats:", error);
+          const errorMsg =
+            error instanceof Error
+              ? error.message
+              : "Could not load employer statistics.";
+          setStatsError(errorMsg);
+          toast({
+            title: "Error Loading Stats",
+            description: errorMsg,
+            variant: "destructive",
+          });
+        } finally {
+          if (isMounted) setIsLoadingStats(false);
+        }
+      };
+
+      fetchStats();
+    } else {
+      if (isMounted) {
+        setIsLoadingStats(false);
+      }
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [profile, isEmployer]);
+
   return (
     <div className="container mx-auto py-8 px-4 space-y-8">
       <PageHeader>
@@ -135,38 +223,59 @@ export const EmployerDashboardPage: React.FC = () => {
       </PageHeader>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Company Profile Card */}
         <Card className="md:col-span-1 glass-card">
           <CardHeader>
-            <CardTitle>Company Profile</CardTitle>
-            <CardDescription>Manage your company's details.</CardDescription>
+            <CardTitle>At a Glance</CardTitle>
+            <CardDescription>Your company's current activity.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {isLoadingStats ? (
+              <div className="flex justify-center items-center py-4">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : statsError ? (
+              <p className="text-red-600 text-center">Error: {statsError}</p>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <TrendingUp className="mr-2 h-5 w-5 text-blue-500" />
+                    <span>Active Postings</span>
+                  </div>
+                  <span className="font-semibold text-lg">
+                    {stats.totalActiveJobs ?? "-"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Users className="mr-2 h-5 w-5 text-green-500" />
+                    <span>Total Applicants</span>
+                  </div>
+                  <span className="font-semibold text-lg">
+                    {stats.totalApplicants ?? "-"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Award className="mr-2 h-5 w-5 text-yellow-500" />
+                    <span>Offers Extended</span>
+                  </div>
+                  <span className="font-semibold text-lg">
+                    {stats.totalOffers ?? "-"}
+                  </span>
+                </div>
+              </div>
+            )}
             <Button
               variant="outline"
-              className="w-full"
+              className="w-full mt-4"
               onClick={() => navigate("/edit-company-profile")}
             >
               <Building className="mr-2 h-4 w-4" /> Edit Company Profile
             </Button>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => navigate("/company-profile")}
-            >
-              <Building className="mr-2 h-4 w-4" /> View Company Profile
-            </Button>
-            <Button
-              variant="default"
-              className="w-full"
-              onClick={() => navigate("/post-job")}
-            >
-              <FilePlus className="mr-2 h-4 w-4" /> Post a New Job
-            </Button>
           </CardContent>
         </Card>
 
-        {/* Active Job Postings Card */}
         <Card className="md:col-span-2 glass-card">
           <CardHeader>
             <CardTitle>Active Job Postings</CardTitle>
@@ -203,27 +312,52 @@ export const EmployerDashboardPage: React.FC = () => {
                         {job.status}
                       </Badge>
                       <span>·</span>
+                      <div className="flex items-center">
+                        <Users className="h-4 w-4 mr-1" />
+                        <span>{job.applicant_count} Applicant(s)</span>
+                      </div>
+                      <span>·</span>
                       <span>
                         Posted: {new Date(job.created_at).toLocaleDateString()}
                       </span>
                     </div>
                   </div>
-                  <div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mr-2"
-                      onClick={() => navigate(`/jobs/${job.id}`)}
-                    >
-                      View
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/edit-job/${job.id}`)}
-                    >
-                      Edit
-                    </Button>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mr-2"
+                        onClick={() => navigate(`/jobs/${job.id}`)}
+                      >
+                        View Description
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/edit-job/${job.id}`)}
+                      >
+                        Edit Post
+                      </Button>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/jobs/${job.id}/applicants`)}
+                      >
+                        View Applicants
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/jobs/${job.id}/candidates`)}
+                        className="flex items-center"
+                      >
+                        <Zap className="mr-1 h-3 w-3 text-yellow-500" />
+                        Find Candidates
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))
@@ -247,7 +381,6 @@ export const EmployerDashboardPage: React.FC = () => {
         </Card>
       </div>
 
-      {/* Recent Applications Card - Now shows Jobs with Applicant Counts */}
       <Card className="glass-card">
         <CardHeader>
           <CardTitle>Recent Job Activity</CardTitle>

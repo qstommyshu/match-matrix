@@ -140,6 +140,8 @@
 - AI Profile Summarization feature fully implemented and operational
 - Employer Power Match feature implemented (backend functions, UI section)
 - Fixed issue where Employers saw "Anonymous Candidate" in Potential Candidates view.
+- Dashboards now display user-specific statistics.
+- Company profile page displays live job data.
 
 ## 2023-08-04
 
@@ -412,3 +414,23 @@
   - **RLS Fix:** Identified that the `profiles` RLS policy from `04_setup_profiles_tables.sql` was too restrictive (`auth.uid() = id`), preventing joins from `employer_power_matches`. Created migration `26_fix_profile_read_rls_for_employer_matches.sql` to drop the old policy and add specific policies allowing users to read their own profile and employers to read profiles of their matched candidates.
   - **Data Mapping Fix:** Corrected the mapping logic within `getEmployerPowerMatches` in `src/lib/database.ts`. The original code incorrectly assumed nested joins (`job`, `job_seeker`) returned by Supabase were arrays, leading to `undefined` data. Implemented a `getSingle` helper to correctly handle either object or array[0] returns from Supabase joins.
   - **Typing:** Addressed linter errors in `getEmployerPowerMatches` by defining more precise intermediate types for the raw query result, improving code clarity while maintaining the functional `getSingle` mapping logic.
+
+## 2023-08-17
+
+- **Dashboard Stats:** Implemented statistics display on both Employer and Job Seeker dashboards.
+  - Created new SQL functions (`get_employer...`, `get_job_seeker...`) for counting active jobs, total applicants, offers, applications, and invitations.
+  - Added corresponding helper functions in `database.ts`.
+  - Updated `EmployerDashboardPage.tsx` to fetch and display employer stats (Active Postings, Total Applicants, Offers Extended) in the "At a Glance" card, replacing previous buttons.
+  - Updated `JobSeekerDashboardPage.tsx` to fetch and display job seeker stats (Applications Sent, Invitations Received, Offers Received) in the Profile card.
+- **UI/Data Fixes:**
+  - Updated `JobDetailPage.tsx` to display `employer_profile.company_name` instead of `employer.full_name`.
+  - Corrected data access logic in `database.ts` (`getCandidateInvitations`) and updated fallback text in `InvitationsPage.tsx` to better handle potentially missing company names or job titles.
+  - Refactored `CompanyProfile.tsx` to fetch and display live job postings from Supabase instead of using hardcoded data, including loading/error states and functional action buttons.
+
+## 2023-08-18 (Placeholder for new entry)
+
+- **Feature:** Implemented Company Benefits management.
+  - Created migration `29_add_benefits_to_employer_profiles.sql` to add `benefits TEXT[]` column.
+  - Created `UpdateBenefitsModal.tsx` allowing employers to select benefits from a predefined list.
+  - Integrated the modal into `CompanyProfile.tsx`, replacing the hardcoded benefits display with live data and adding an update button.
+  - Ensured profile refresh (`refreshProfile`) occurs after successful updates.

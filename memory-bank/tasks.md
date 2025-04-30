@@ -67,11 +67,11 @@
   - [ ] Add filtering to job search
 - [x] Implement job viewing (JobDetailPage)
 - [x] Implement job editing (EditJobPage reusing PostJobForm)
-- [ ] Develop matching algorithm
-  - [ ] Define matching criteria
+- [x] Develop matching algorithm
+  - [x] Define matching criteria
   - [x] Create skills and preference tables
-  - [ ] Implement scoring system
-  - [ ] Build recommendation engine (Basic fetch in JobSeekerDashboard)
+  - [x] Implement scoring system
+  - [x] Build recommendation engine (Basic fetch in JobSeekerDashboard)
 - [x] Implement application system
   - [x] Create application database functions
   - [x] Display applications to employers
@@ -79,7 +79,7 @@
   - [x] Set up Row Level Security for profile viewing
   - [x] Refine RLS for profile/employer_profile read access
   - [x] Sort applicants by match score then date
-- [ ] Add notification system
+- [x] Add invitation system
 
 ## AI Profile Summarization (New Feature)
 
@@ -108,16 +108,16 @@
 
 ## Job Enhancements
 
-- [ ] **Company Benefits Integration**
-  - [ ] **Database:** Add `benefits` column (e.g., `TEXT[]`) to `jobs` table.
-  - [ ] **Database:** Create migration file for benefits column.
-  - [ ] **Database:** Update RLS policies for `jobs` if needed (read access).
-  - [ ] **Backend:** Update `Job` type definition to include `benefits`.
-  - [ ] **Backend:** Update `getJob` function to select `benefits`.
-  - [ ] **Backend:** Update `createJob` and `updateJob` functions to handle `benefits`.
-  - [ ] **Frontend:** Add benefits input field to `PostJobForm.tsx`.
-  - [ ] **Frontend:** Display benefits section on `JobDetailPage.tsx`.
-  - [ ] **Testing:** Verify benefits are saved, updated, and displayed correctly.
+- [x] **Company Benefits Integration**
+  - [x] **Database:** Add `benefits` column (e.g., `TEXT[]`) to `jobs` table.
+  - [x] **Database:** Create migration file for benefits column.
+  - [x] **Database:** Update RLS policies for `jobs` if needed (read access).
+  - [x] **Backend:** Update `Job` type definition to include `benefits`.
+  - [x] **Backend:** Update `getJob` function to select `benefits`.
+  - [x] **Backend:** Update `createJob` and `updateJob` functions to handle `benefits`.
+  - [x] **Frontend:** Add benefits input field to `PostJobForm.tsx`.
+  - [x] **Frontend:** Display benefits section on `JobDetailPage.tsx`.
+  - [x] **Testing:** Verify benefits are saved, updated, and displayed correctly.
 
 ## Application Management Enhancements
 
@@ -152,32 +152,17 @@
   - [x] **Frontend (Employer):** Implement logic to call batch update function with selected applicant IDs and target stage/action.
   - [x] **Testing:** Verify batch actions work correctly for various scenarios (stage change, etc.).
 
-## AI Features
-
-- [ ] **AI-Generated Rejection Email**
-  - [ ] **Database:** Consider adding `rejection_email_sent_at` (TIMESTAMPZ) or `generated_rejection_email` (TEXT) to `applications` table. Create migration if needed.
-  - [ ] **Backend:** Create Supabase Edge Function (`generate-rejection-email`).
-    - [ ] Implement security check (verify user is the job's employer, application belongs to job).
-    - [ ] Implement data fetching: job details, applicant profile (skills, bio, etc.), application details.
-    - [ ] Develop prompt engineering strategy for constructive feedback.
-    - [ ] Integrate OpenAI API call.
-    - [ ] Define function input (application_id, maybe custom notes) and output (email content).
-  - [ ] **Frontend Utility:** Add helper function (e.g., `generateRejectionEmail`) to `supabase.ts` to call the Edge Function.
-  - [ ] **Frontend (Employer):** Add "Generate Rejection Email" button/action on `ViewApplicantsPage.tsx` (perhaps visible when stage is 'Rejected' or as part of changing stage to 'Rejected').
-  - [ ] **Frontend (Employer):** Implement UI to trigger generation, potentially show preview, and maybe trigger sending (or just provide content).
-  - [ ] **Testing:** Test Edge Function logic, prompt effectiveness, API integration, and frontend interaction.
-
 ## Developer Experience
 
 - [ ] **Basic CI/CD Pipeline**
-  - [ ] Choose CI/CD platform (e.g., GitHub Actions, Vercel, Netlify).
+  - [x] Choose CI/CD platform (e.g., GitHub Actions, Vercel, Netlify).
   - [ ] Configure build script in `package.json` if necessary.
   - [ ] Create workflow configuration file (e.g., `.github/workflows/deploy.yml`).
   - [ ] Define trigger (e.g., push to `main`).
   - [ ] Add steps: checkout, setup Node, install dependencies, build.
   - [ ] (Optional) Add step: run tests (if tests exist).
   - [ ] Configure deployment step (e.g., using Vercel CLI, Netlify CLI, or GitHub Actions deploy actions).
-  - [ ] Set up environment variables (Supabase URL/Key, OpenAI Key) as secrets in the CI/CD platform.
+  - [x] Set up environment variables (Supabase URL/Key, OpenAI Key) as secrets in the CI/CD platform.
   - [ ] **Testing:** Trigger pipeline and verify successful build and deployment.
 
 ## Pro Job Seeker Feature
@@ -320,7 +305,7 @@
     - [x] Implement invitation dialog with customizable message
     - [x] Integrate `sendCandidateInvitation` function call
   - [x] Add filtering options (e.g., by match score)
-- [ ] **Frontend: Candidate View (Invitation Handling)**
+- [x] **Frontend: Candidate View (Invitation Handling)**
   - [x] Create UI section/page to display received invitations (`InvitationsPage.tsx`)
   - [x] Integrate `getCandidateInvitations` fetch
   - [x] Add actions to accept/decline invitations
@@ -364,7 +349,7 @@
 - [ ] **Frontend: Job Seeker Dashboard Enhancement**
   - [ ] **Frontend:** Create a unified dashboard layout with clear sections.
   - [ ] **Frontend:** Add profile completion progress card with suggestions.
-  - [ ] **Frontend:** Add application status summary card.
+  - [x] **Frontend:** Add application status summary card.
   - [ ] **Frontend:** Create recent activity feed.
   - [ ] **Frontend:** Add skills gap analysis based on desired roles.
   - [ ] **Frontend:** Enhance power matches display with score breakdown.
@@ -372,14 +357,14 @@
 - [ ] **Frontend: Employer Dashboard Enhancement**
 
   - [ ] **Frontend:** Create a unified dashboard layout with clear sections.
-  - [ ] **Frontend:** Add job posting metrics (views, applications, etc.).
+  - [x] **Frontend:** Add job posting metrics (views, applications, etc.).
   - [ ] **Frontend:** Create applicant pipeline summary.
   - [ ] **Frontend:** Add recent activity feed.
   - [ ] **Frontend:** Create power matches overview section.
   - [ ] **Frontend:** Add talent pool insights section (future feature).
 
 - [ ] **Frontend: UI Refinements**
-  - [ ] **Frontend:** Audit and reduce redundant information across pages.
+  - [x] **Frontend:** Audit and reduce redundant information across pages.
   - [ ] **Frontend:** Create consistent card components for different content types.
   - [ ] **Frontend:** Implement collapsible sections for dense information.
   - [ ] **Frontend:** Add tooltips for explaining complex features.

@@ -46,6 +46,8 @@ export const InvitationsPage: React.FC = () => {
         profile.id
       );
       if (fetchError) throw fetchError;
+      console.log("data is ");
+      console.log(data);
       setInvitations(data || []);
     } catch (err) {
       console.error("Error fetching invitations:", err);
@@ -208,7 +210,8 @@ export const InvitationsPage: React.FC = () => {
                     <CardDescription>
                       Invited by{" "}
                       {invitation.employer?.employer_profiles?.company_name ||
-                        "a company"}
+                        invitation.employer?.full_name || // Fallback to employer name
+                        "Company Unavailable"}
                       {invitation.job?.location &&
                         ` - ${invitation.job.location}`}
                       {invitation.job?.remote && " (Remote)"}

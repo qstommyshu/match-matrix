@@ -20,6 +20,9 @@ import {
   ShieldCheck,
   CheckCircle,
   AlertTriangle,
+  Send,
+  Mail,
+  Award,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import {
@@ -31,6 +34,9 @@ import {
   Job,
   upgradeToProAccount,
   checkInActiveStatus,
+  getJobSeekerApplicationsCount,
+  getJobSeekerInvitationsCount,
+  getJobSeekerOffersCount,
 } from "@/lib/database";
 import { toast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -98,6 +104,19 @@ export const JobSeekerDashboardPage: React.FC = () => {
   const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [isAssessmentModalOpen, setIsAssessmentModalOpen] = useState(false);
+
+  // State for job seeker stats
+  const [stats, setStats] = useState<{
+    totalApplications: number | null;
+    totalInvitations: number | null;
+    totalOffers: number | null;
+  }>({
+    totalApplications: null,
+    totalInvitations: null,
+    totalOffers: null,
+  });
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [statsError, setStatsError] = useState<string | null>(null);
 
   const profileCompleteness = jobSeekerProfile?.profile_completeness || 60;
   const displayName = profile?.full_name || profile?.email || "Job Seeker";
@@ -210,6 +229,76 @@ export const JobSeekerDashboardPage: React.FC = () => {
       if (isMounted) setIsLoadingApps(false);
     }
 
+    return () => {
+      isMounted = false;
+    };
+  }, [profile, isJobSeeker]);
+
+  // Add effect for loading job seeker stats
+  useEffect(() => {
+    let isMounted = true;
+    if (profile?.id && isJobSeeker()) {
+      const fetchStats = async () => {
+        if (!isMounted) return;
+        setIsLoadingStats(true);
+        setStatsError(null);
+        try {
+          const [applicationsResult, invitationsResult, offersResult] =
+            await Promise.all([
+              getJobSeekerApplicationsCount(profile.id),
+              getJobSeekerInvitationsCount(profile.id),
+              getJobSeekerOffersCount(profile.id),
+            ]);
+
+          if (!isMounted) return;
+
+          if (applicationsResult.error) {
+            throw new Error(
+              `Failed to fetch applications count: ${applicationsResult.error.message}`
+            );
+          }
+          if (invitationsResult.error) {
+            throw new Error(
+              `Failed to fetch invitations count: ${invitationsResult.error.message}`
+            );
+          }
+          if (offersResult.error) {
+            throw new Error(
+              `Failed to fetch offers count: ${offersResult.error.message}`
+            );
+          }
+
+          setStats({
+            totalApplications: applicationsResult.data,
+            totalInvitations: invitationsResult.data,
+            totalOffers: offersResult.data,
+          });
+        } catch (error) {
+          if (!isMounted) return;
+          console.error("Failed to fetch job seeker stats:", error);
+          const errorMsg =
+            error instanceof Error
+              ? error.message
+              : "Could not load statistics.";
+          setStatsError(errorMsg);
+          toast({
+            title: "Error Loading Stats",
+            description: errorMsg,
+            variant: "destructive",
+          });
+        } finally {
+          if (isMounted) setIsLoadingStats(false);
+        }
+      };
+
+      // Call fetchStats immediately
+      fetchStats();
+    } else {
+      // Not a job seeker or no profile ID, reset stats loading
+      if (isMounted) {
+        setIsLoadingStats(false);
+      }
+    }
     return () => {
       isMounted = false;
     };
@@ -342,13 +431,53 @@ export const JobSeekerDashboardPage: React.FC = () => {
       {isProUser && <PowerMatchesSection />}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Profile Card */}
+        {/* Profile Card - UPDATED */}
         <Card className="md:col-span-1 glass-card">
           <CardHeader>
             <CardTitle>Your Profile</CardTitle>
-            <CardDescription>Keep your profile up-to-date.</CardDescription>
+            <CardDescription>Track your job seeking activity.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Stats section */}
+            {isLoadingStats ? (
+              <div className="flex justify-center items-center py-2">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              </div>
+            ) : statsError ? (
+              <p className="text-red-600 text-xs">Error: {statsError}</p>
+            ) : (
+              <div className="space-y-3 mb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Send className="mr-2 h-4 w-4 text-blue-500" />
+                    <span className="text-sm">Applications</span>
+                  </div>
+                  <span className="font-semibold text-lg">
+                    {stats.totalApplications ?? "-"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Mail className="mr-2 h-4 w-4 text-green-500" />
+                    <span className="text-sm">Invitations</span>
+                  </div>
+                  <span className="font-semibold text-lg">
+                    {stats.totalInvitations ?? "-"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Award className="mr-2 h-4 w-4 text-yellow-500" />
+                    <span className="text-sm">Offers</span>
+                  </div>
+                  <span className="font-semibold text-lg">
+                    {stats.totalOffers ?? "-"}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Profile completeness section */}
             <div className="space-y-1">
               <Label className="text-sm text-muted-foreground">
                 Completeness
@@ -360,6 +489,8 @@ export const JobSeekerDashboardPage: React.FC = () => {
                 </span>
               </div>
             </div>
+
+            {/* Actions section */}
             <Button
               variant="outline"
               className="w-full"

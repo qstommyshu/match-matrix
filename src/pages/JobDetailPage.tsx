@@ -7,6 +7,7 @@ import {
   createApplication,
   Application,
   updateApplicationStatus,
+  EmployerProfile,
 } from "@/lib/database"; // Import application functions
 import { useProfile } from "@/lib/ProfileContext"; // To check if viewer is owner or applicant
 import { useAuth } from "@/lib/AuthContext"; // To check if logged in
@@ -70,6 +71,10 @@ const JobDetailPage: React.FC = () => {
         if (!isMounted) return;
         if (fetchError) throw fetchError;
         if (!fetchedJob) throw new Error("Job not found.");
+
+        // Log to see the structure
+        console.log("Job data structure:", fetchedJob);
+
         setJob(fetchedJob);
 
         // Check Application Status (only if user is logged in seeker)
@@ -283,9 +288,10 @@ const JobDetailPage: React.FC = () => {
               </Badge>
               <CardTitle className="text-3xl font-bold">{job.title}</CardTitle>
               {job.employer && (
-                // TODO: Link to a proper company profile page if available
                 <span className="text-lg text-muted-foreground">
-                  {job.employer.full_name || job.employer.email}
+                  {job.employer_profile?.company_name ||
+                    job.employer.full_name ||
+                    job.employer.email}
                 </span>
               )}
             </div>

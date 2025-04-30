@@ -1334,67 +1334,66 @@ export const getEmployerPowerMatches = async (
 
   if (error) {
     console.error("Error fetching employer power matches:", error);
-    return { data: null, error, count: 0 };
+    return { data: [], error, count: 0 };
+  }
+
+  // Helper to safely get the first item if it's an array, or return the object/null
+  function getSingle<T>(val: T | T[] | null): T | null {
+    if (Array.isArray(val)) {
+      return val[0] || null;
+    }
+    return val;
   }
 
   // Map data to the correct type, handling potential arrays from joins
-  const typedData: EmployerPowerMatch[] = (data || []).map(
-    (item: RawEmployerPowerMatchData) => {
-      // Helper to safely get the first item if it's an array, or return the object/null
-      function getSingle<T>(val: T | T[] | null): T | null {
-        if (Array.isArray(val)) {
-          return val[0] || null;
-        }
-        return val;
-      }
+  const mappedData: EmployerPowerMatch[] = data.map((item) => {
+    const singleJob = getSingle(item.job);
+    const singleJobSeeker = getSingle(item.job_seeker);
+    const singleJobSeekerProfile = singleJobSeeker
+      ? getSingle(singleJobSeeker.job_seeker_profile)
+      : null;
+    // Correctly map user_skills which might be an array of objects with a skill property
+    const userSkills = singleJobSeeker?.user_skills
+      ? singleJobSeeker.user_skills
+          .map((us) => getSingle(us?.skill)?.name)
+          .filter((name): name is string => !!name)
+      : [];
 
-      const jobData = getSingle(item.job);
-      const jobSeekerData = getSingle(item.job_seeker);
-      const jobSeekerProfileData = jobSeekerData
-        ? getSingle(jobSeekerData.job_seeker_profile)
-        : null;
+    return {
+      id: item.id,
+      employer_id: employerId, // Add employerId here
+      job_id: jobId, // Add jobId here
+      user_id: singleJobSeeker?.id ?? "", // Ensure user_id is always string
+      match_score: item.match_score,
+      created_at: item.created_at,
+      viewed_at: item.viewed_at,
+      sent_invitation_at: item.sent_invitation_at,
+      invitation_status: item.invitation_status,
+      invitation_response_at: item.invitation_response_at,
+      job: singleJob ? { id: singleJob.id, title: singleJob.title } : undefined,
+      job_seeker: singleJobSeeker
+        ? {
+            id: singleJobSeeker.id,
+            full_name: singleJobSeeker.full_name,
+            email: singleJobSeeker.email,
+            user_skills: userSkills, // Use the mapped skills array
+            job_seeker_profile: singleJobSeekerProfile
+              ? {
+                  headline: singleJobSeekerProfile.headline,
+                  location: singleJobSeekerProfile.location,
+                  years_of_experience:
+                    singleJobSeekerProfile.years_of_experience,
+                  bio: singleJobSeekerProfile.bio,
+                  education: singleJobSeekerProfile.education,
+                  desired_role: singleJobSeekerProfile.desired_role,
+                }
+              : null,
+          }
+        : undefined,
+    };
+  });
 
-      const skills =
-        jobSeekerData?.user_skills
-          ?.map((skillData: RawUserSkillEntry) => skillData.skill?.name)
-          .filter((name): name is string => !!name) || [];
-
-      return {
-        id: item.id,
-        employer_id: employerId,
-        job_id: jobId,
-        user_id: jobSeekerData?.id || "",
-        match_score: item.match_score,
-        created_at: item.created_at,
-        viewed_at: item.viewed_at,
-        sent_invitation_at: item.sent_invitation_at,
-        invitation_status: item.invitation_status,
-        invitation_response_at: item.invitation_response_at,
-        job: jobData ? { id: jobData.id, title: jobData.title } : undefined,
-        job_seeker: jobSeekerData
-          ? {
-              id: jobSeekerData.id,
-              full_name: jobSeekerData.full_name,
-              email: jobSeekerData.email,
-              user_skills: skills,
-              job_seeker_profile: jobSeekerProfileData
-                ? {
-                    headline: jobSeekerProfileData.headline,
-                    location: jobSeekerProfileData.location,
-                    years_of_experience:
-                      jobSeekerProfileData.years_of_experience,
-                    bio: jobSeekerProfileData.bio,
-                    education: jobSeekerProfileData.education,
-                    desired_role: jobSeekerProfileData.desired_role,
-                  }
-                : null,
-            }
-          : undefined,
-      };
-    }
-  );
-
-  return { data: typedData, error: null, count: count ?? 0 };
+  return { data: mappedData, error: null, count: count ?? 0 };
 };
 
 /**
@@ -1580,9 +1579,15 @@ export const getCandidateInvitations = async (
   // Map data to the correct type
   const typedData: CandidateInvitation[] = (data || []).map(
     (item: CandidateInvitationQueryResult) => {
-      const jobData = item.job?.[0];
-      const employerData = item.employer?.[0];
-      const employerProfileData = employerData?.employer_profiles?.[0];
+      // Handle potential array/object inconsistency from Supabase joins
+      const jobData = Array.isArray(item.job) ? item.job[0] : item.job;
+      const employerData = Array.isArray(item.employer)
+        ? item.employer[0]
+        : item.employer;
+      const employerProfileData =
+        employerData && Array.isArray(employerData.employer_profiles)
+          ? employerData.employer_profiles[0]
+          : employerData?.employer_profiles; // Allow object case too
 
       return {
         id: item.id,
@@ -1607,17 +1612,34 @@ export const getCandidateInvitations = async (
           ? {
               id: employerData.id,
               full_name: employerData.full_name,
-              employer_profiles: employerProfileData
-                ? {
-                    company_name: employerProfileData.company_name,
-                    logo_url: employerProfileData.logo_url,
-                  }
-                : null,
+              employer_profiles:
+                employerProfileData && !Array.isArray(employerProfileData)
+                  ? {
+                      company_name: employerProfileData.company_name,
+                      logo_url: employerProfileData.logo_url,
+                    }
+                  : null,
             }
           : undefined,
       };
     }
   );
+
+  if (data) {
+    data.forEach((invite, idx) => {
+      console.group(`Invitation #${idx + 1}`);
+      console.log("  id:", invite.id);
+      console.log("  job_id:", invite.job_id, " job:", invite.job);
+      console.log(
+        "  employer_id:",
+        invite.employer_id,
+        " employer:",
+        invite.employer
+      );
+      console.log("  status:", invite.status, " viewed_at:", invite.viewed_at);
+      console.groupEnd();
+    });
+  }
 
   return { data: typedData, error: null, count: count ?? 0 };
 };
@@ -1798,6 +1820,141 @@ export const triggerEmployerPowerMatch = async (
       data: null,
       error: error instanceof Error ? error : new Error(String(error)),
     };
+  }
+};
+
+// Function to get the total number of unique applicants for an employer
+export const getEmployerTotalApplicants = async (
+  employerId: string
+): Promise<{ data: number | null; error: Error | null }> => {
+  try {
+    const { data, error } = await supabase.rpc(
+      "get_employer_total_applicants",
+      {
+        p_employer_id: employerId,
+      }
+    );
+
+    if (error) {
+      console.error("Error fetching total applicants:", error);
+      throw error;
+    }
+
+    return { data: data ?? 0, error: null };
+  } catch (error) {
+    return { data: null, error: error as Error };
+  }
+};
+
+// Function to get the total number of active (open) jobs for an employer
+export const getEmployerActiveJobsCount = async (
+  employerId: string
+): Promise<{ data: number | null; error: Error | null }> => {
+  try {
+    const { data, error } = await supabase.rpc(
+      "get_employer_active_jobs_count",
+      {
+        p_employer_id: employerId,
+      }
+    );
+
+    if (error) {
+      console.error("Error fetching active jobs count:", error);
+      throw error;
+    }
+
+    return { data: data ?? 0, error: null };
+  } catch (error) {
+    return { data: null, error: error as Error };
+  }
+};
+
+// Function to get the total number of applications sent by a job seeker
+export const getJobSeekerApplicationsCount = async (
+  userId: string
+): Promise<{ data: number | null; error: Error | null }> => {
+  try {
+    const { data, error } = await supabase.rpc(
+      "get_job_seeker_applications_count",
+      {
+        p_user_id: userId,
+      }
+    );
+
+    if (error) {
+      console.error("Error fetching job seeker applications count:", error);
+      throw error;
+    }
+
+    return { data: data ?? 0, error: null };
+  } catch (error) {
+    return { data: null, error: error as Error };
+  }
+};
+
+// Function to get the total number of invitations received by a job seeker
+export const getJobSeekerInvitationsCount = async (
+  userId: string
+): Promise<{ data: number | null; error: Error | null }> => {
+  try {
+    const { data, error } = await supabase.rpc(
+      "get_job_seeker_invitations_count",
+      {
+        p_user_id: userId,
+      }
+    );
+
+    if (error) {
+      console.error("Error fetching job seeker invitations count:", error);
+      throw error;
+    }
+
+    return { data: data ?? 0, error: null };
+  } catch (error) {
+    return { data: null, error: error as Error };
+  }
+};
+
+// Function to get the total number of offers received by a job seeker
+export const getJobSeekerOffersCount = async (
+  userId: string
+): Promise<{ data: number | null; error: Error | null }> => {
+  try {
+    const { data, error } = await supabase.rpc("get_job_seeker_offers_count", {
+      p_user_id: userId,
+    });
+
+    if (error) {
+      console.error("Error fetching job seeker offers count:", error);
+      throw error;
+    }
+
+    return { data: data ?? 0, error: null };
+  } catch (error) {
+    return { data: null, error: error as Error };
+  }
+};
+
+// Function to get the total number of offers extended by an employer
+export const getEmployerTotalOffersExtended = async (
+  employerId: string
+): Promise<{ data: number | null; error: Error | null }> => {
+  try {
+    const { data, error } = await supabase.rpc(
+      "get_employer_total_offers_extended",
+      {
+        p_employer_id: employerId,
+      }
+    );
+
+    if (error) {
+      console.error("Error fetching total offers extended:", error);
+      throw error;
+    }
+
+    return { data: data ?? 0, error: null };
+  } catch (error) {
+    return { data: null, error: error as Error };
   }
 };
 
