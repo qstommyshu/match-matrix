@@ -5,6 +5,9 @@ A modern, AI-driven job matching platform connecting job seekers with employers,
 **Live Demo:** [https://v0-match-matrix-landing-page.vercel.app/](https://v0-match-matrix-landing-page.vercel.app/)
 (Deployed on Vercel)
 
+**New Feature Video Demo:** [https://youtu.be/JMr1hCFNumY](https://youtu.be/JMr1hCFNumY)
+**Basic Workflow Video Demo:** [https://youtu.be/S68lRzLXoj0](https://youtu.be/S68lRzLXoj0)
+
 ---
 
 ## ✨ AI-Driven Development & Vibe Coding
@@ -59,14 +62,14 @@ _(Based on completed items in `memory-bank/tasks.md`)_
 ### Core Decisions
 
 1.  **Supabase Platform:** Chosen as the Backend-as-a-Service (BaaS) for its integrated features (Auth, Postgres DB, Edge Functions), simplifying backend development.
-2.  **React + Vite:** Standard, performant frontend framework for building modern web applications.
+2.  **React & Next.js + Vite:** Standard, performant frontend framework for building modern web applications.
 3.  **TypeScript:** Ensures type safety and improves code maintainability.
 4.  **Tailwind CSS & shadcn/ui:** Utility-first styling and a pre-built component library enable rapid, consistent, and accessible UI development.
 5.  **Edge Functions:** Used for server-side logic requiring external API calls (OpenAI) or complex database operations (Power Match automation), keeping logic close to the data.
 
 ### Technology Stack
 
-- **Framework**: React (with Vite)
+- **Framework**: React & Next.js (with Vite)
 - **Language**: TypeScript
 - **Backend**: Supabase (Authentication, Postgres Database, Edge Functions)
 - **Styling**: Tailwind CSS
