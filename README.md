@@ -8,6 +8,7 @@ A modern, AI-driven job matching platform connecting job seekers with employers,
 [![New Feature Video Demo](https://img.youtube.com/vi/JMr1hCFNumY/hqdefault.jpg)](https://youtu.be/JMr1hCFNumY)
 
 **New Feature Video Demo:** [https://youtu.be/JMr1hCFNumY](https://youtu.be/JMr1hCFNumY)
+
 **Basic Workflow Video Demo:** [https://youtu.be/S68lRzLXoj0](https://youtu.be/S68lRzLXoj0)
 
 ---
