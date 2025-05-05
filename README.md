@@ -1,4 +1,4 @@
-# Match Matrix
+\*\*\*\*# Match Matrix
 
 A modern, AI-driven job matching platform connecting job seekers with employers, featuring skill-based matching, AI-powered summaries, and direct candidate invitations.
 
@@ -7,6 +7,7 @@ A modern, AI-driven job matching platform connecting job seekers with employers,
 
 [![New Feature Video Demo](https://img.youtube.com/vi/JMr1hCFNumY/hqdefault.jpg)](https://youtu.be/JMr1hCFNumY)
 
+**New Feature Video Demo:** [https://youtu.be/JMr1hCFNumY](https://youtu.be/JMr1hCFNumY)
 **Basic Workflow Video Demo:** [https://youtu.be/S68lRzLXoj0](https://youtu.be/S68lRzLXoj0)
 
 ---
@@ -19,7 +20,7 @@ The development process heavily utilized AI tools and specific methodologies:
 
 1.  **Cursor Memory Bank:** The core control mechanism for AI development. It was used for:
 
-    - **Planning & Tracking:** Defining features, breaking down tasks (`tasks.md`), and tracking progress (`progress.md`).
+    - **Planning & Tracking:** Defining features,\*\*\*\* breaking down tasks (`tasks.md`), and tracking progress (`progress.md`).
     - **Context Management:** Providing relevant technical context (`techContext.md`), system patterns (`systemPatterns.md`), and product goals (`productContext.md`) to the AI. See the `/memory-bank` directory for details.
     - **Mode-Based Development:** Switching between different operational modes (VAN for initialization, PLAN for structuring work, BUILD for code generation, CREATIVE for complex problem-solving/debugging) to guide the AI's behavior effectively.
 
